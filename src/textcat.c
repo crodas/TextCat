@@ -12,28 +12,28 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Author:  Cesar Rodas <saddor@gmail.com>                              |
+   | Author:  César Rodas <crodas@member.fsf.org>                         |
    +----------------------------------------------------------------------+
-   | Base on the LibTextCat project,                                      |
+   | Based on the LibTextCat project,                                     |
    | Copyright (c) 2003, WiseGuys Internet B.V.                           |
    +----------------------------------------------------------------------+
  */
 
 #include "textcat.h"
 
-static long textcat_simple_hash(const char *p, int len);
-static Bool textcat_ngram_find(const ngram_set * nset, const char * key, int len, ngram ** item);
-static int textcat_ngram_incr(TextCat * tc, ngram_set * nset, const char * key, int len);
-static ngram * textcat_ngram_create(TextCat * tc, ngram_set * nset, const char * key, int len);
+static long textcat_simple_hash(const uchar *p, int len);
+static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram ** item);
+static int textcat_ngram_incr(TextCat * tc, ngram_set * nset, const uchar * key, int len);
+static ngram * textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len);
 
-// simple_hash(const char *p, int len) {{{
+// simple_hash(const uchar *p, int len) {{{
 /*
  * fast and furious little hash function
  *
  * (Note that we could use some kind of rolling checksum, and update it
  * during n-gram construction) 
  */
-static long textcat_simple_hash(const char *p, int len)
+static long textcat_simple_hash(const uchar *p, int len)
 {
 	long h = len * 13;
 	while (*p) {
@@ -43,8 +43,8 @@ static long textcat_simple_hash(const char *p, int len)
 }
 // }}}
 
-// textcat_find_ngram(const ngram_set * nset, const char * key, int len, ngram ** item) {{{
-static Bool textcat_ngram_find(const ngram_set * nset, const char * key, int len, ngram ** item)
+// textcat_find_ngram(const ngram_set * nset, const uchar * key, int len, ngram ** item) {{{
+static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram ** item)
 {
     ngram * entry;
     long i;
@@ -63,8 +63,8 @@ static Bool textcat_ngram_find(const ngram_set * nset, const char * key, int len
 }
 // }}}
 
-// textcat_ngram_incr(TextCat * tc, ngram_set * nset, const char * key, int len) {{{
-static int textcat_ngram_incr(TextCat * tc, ngram_set * nset, const char * key, int len)
+// textcat_ngram_incr(TextCat * tc, ngram_set * nset, const uchar * key, int len) {{{
+static int textcat_ngram_incr(TextCat * tc, ngram_set * nset, const uchar * key, int len)
 {
     ngram * item;
     if (textcat_ngram_find(nset, key, len, &item) == TC_TRUE) {
@@ -76,8 +76,8 @@ static int textcat_ngram_incr(TextCat * tc, ngram_set * nset, const char * key, 
 }
 // }}}
 
-// textcat_ngram_create(TextCat * tc, ngram_set * nset, const char * key, int len) {{{
-static ngram * textcat_ngram_create(TextCat * tc, ngram_set * nset, const char * key, int len)
+// textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len) {{{
+static ngram * textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len)
 {
     ngram * item;
     if (nset->total+1 == nset->size) {
@@ -115,10 +115,30 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->ngram_precreate = TC_NGRAM_PRECREATE;
     tc->pool_preallocate_size = TC_BUFFER_SIZE;
     tc->hash_size = TC_HASH_SIZE;
+    tc->min_ngram_len = MIN_NGRAM_LEN;
+    tc->max_ngram_len = MAX_NGRAM_LEN;
+    tc->last_status = TC_OK;
     *tcc = tc;
     return TC_TRUE;
 }
 // }}}
+
+int TextCat_parse(TextCat * tc, const uchar * text)
+{
+    uchar *t1, *t2;
+    int i;
+    t1 = text;
+    t2 = tc->malloc( tc->max_ngram_len+1 );
+    while (*t1) {
+        for (i=tc->min_ngram_len; i < tc->max_ngram_len; i++) {
+            strncpy(t2, t1, i);
+            printf("(%s)\n", t2);
+        }
+        t1++;
+    }
+    free(t2);
+    printf("%s\n", text);
+}
 
 // TextCat_Destroy(TextCat * tc) {{{
 Bool TextCat_Destroy(TextCat * tc) 

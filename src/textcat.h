@@ -52,18 +52,27 @@ typedef struct {
     long pool_preallocate_size;
     int hash_size;
     ngram_hash * hash;
+    int min_ngram_len;
+    int max_ngram_len;
+    char * errstr;
+    int last_status;
 } TextCat;
 
 
 #define TC_HASH_SIZE  100
 #define TC_BUFFER_SIZE (16 * 1024)
 #define TC_NGRAM_PRECREATE 50
-#define Bool int
-#define TC_TRUE 1
-#define TC_FALSE 0
-
-#define TC_FREE 1
-#define TC_BUSY 0
+#define Bool            int
+#define uchar           unsigned char
+#define TC_TRUE         1
+#define TC_FALSE        0
+#define TC_OK           TC_TRUE
+#define TC_ERR          -1
+#define TC_FREE         1
+#define TC_BUSY         0
+#define MIN_NGRAM_LEN   2
+#define MAX_NGRAM_LEN   5
 
 Bool TextCat_Init(TextCat ** tc);
 Bool TextCat_Destroy(TextCat * tc);
+int TextCat_parse(TextCat * tc, const uchar * text);
