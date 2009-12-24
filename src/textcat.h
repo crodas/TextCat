@@ -20,10 +20,11 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 
 typedef struct {
-    unsigned char * str;
     long freq;
+    size_t offset;
     int len;
     int status;
 } ngram;
@@ -47,27 +48,31 @@ typedef struct {
 
 typedef struct {
     void * (*malloc)(long);
+    void * (*calloc)(long, long);
     void * (*realloc)(long, void *);
+    void * (*free)(void *);
     int ngram_precreate;
     long pool_preallocate_size;
     int hash_size;
-    ngram_hash * hash;
+    ngram_hash hash;
     int min_ngram_len;
     int max_ngram_len;
     char * errstr;
     int last_status;
+    int status;
 } TextCat;
 
 
-#define TC_HASH_SIZE  100
-#define TC_BUFFER_SIZE (16 * 1024)
-#define TC_NGRAM_PRECREATE 50
+#define TC_HASH_SIZE        100
+#define TC_BUFFER_SIZE      (16 * 1024) 
+#define TC_NGRAM_PRECREATE  50 
 #define Bool            int
 #define uchar           unsigned char
 #define TC_TRUE         1
 #define TC_FALSE        0
 #define TC_OK           TC_TRUE
 #define TC_ERR          -1
+#define TC_ERR_MEM      -2
 #define TC_FREE         1
 #define TC_BUSY         0
 #define MIN_NGRAM_LEN   2
@@ -75,4 +80,4 @@ typedef struct {
 
 Bool TextCat_Init(TextCat ** tc);
 Bool TextCat_Destroy(TextCat * tc);
-int TextCat_parse(TextCat * tc, const uchar * text);
+int TextCat_parse(TextCat * tc, const uchar * text, long length);
