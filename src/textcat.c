@@ -49,13 +49,9 @@ static long textcat_simple_hash(const uchar *p, int len)
 static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram_t ** item)
 {
     ngram_t * entry;
-    long i;
-    for (i=0; i < nset->total; i++) 
+    
+    for (entry = nset->first; entry!=NULL; entry = entry->next) 
     {
-        entry = &nset->ngrams[i];
-        if (entry->status == TC_FREE) {
-            break;
-        }
         if (entry->len == len && strncmp(entry->str, key, len) == 0) {
             *item = entry;
             return TC_TRUE;
@@ -86,32 +82,35 @@ static Bool textcat_ngram_incr(TextCat * tc, const uchar * key, int len)
 // }}}
 
 // textcat_ngram_create(TextCat *, ngram_set *, const uchar *, int, ngram **) {{{
-static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len, ngram_t ** item)
+static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len, ngram_t ** ritem)
 {
-    if (nset->size == 0) {
-        nset->size   = tc->ngram_precreate;
-        nset->ngrams = tc->calloc(nset->size, sizeof(ngram_t));
-    } else if (nset->total+1 > nset->size) {
-        nset->size  += tc->ngram_precreate;
-        nset->ngrams = tc->realloc(nset->ngrams, nset->size * sizeof(ngram_t));
-    }
-
-    *item = & nset->ngrams[nset->total];
-    /* setup the new N-gram */
-    (*item)->str    = mempool_strndup(tc, key, len);
-    (*item)->status = TC_BUSY;
-    (*item)->freq   = 0;
-    (*item)->len    = len;
-
-    if ((*item)->str == NULL || nset->ngrams == NULL) {
-        tc->error = TC_ERR_MEM;
+    ngram_t * item;
+    item = mempool_malloc(tc, sizeof(ngram_t));
+    if (item == NULL) {
         return TC_FALSE;
     }
+    /* setup the new N-gram */
+    item->str  = mempool_strndup(tc, key, len);
+    item->freq = 0;
+    item->len  = len;
+    item->next = NULL;
+
+    if (item->str == NULL) {
+        return TC_FALSE;
+    }
+    if (nset->first == NULL) {
+        nset->first = item;
+    }
+    if (nset->last != NULL) {
+        nset->last->next = item;
+    }
+    *ritem = item;
+    nset->last = item;
+    nset->total++;
 
     tc->hash.ngrams++;
-    nset->total++;
-    return item;
-}
+    return TC_TRUE;
+} 
 // }}}
 
 // textcat_init_hash(TextCat * tc) {{{
@@ -120,21 +119,18 @@ static Bool textcat_init_hash(TextCat * tc)
     ngram_set * table;
     int i;
 
-    table  = mempool_calloc(tc, tc->hash_size, sizeof(ngram_set));
-    tc->hash.table = tc->calloc(tc->hash_size+1, sizeof(ngram_set));
-    tc->hash.size = tc->hash_size;
-
-    if (tc->hash.table == NULL) {
-        tc->error = TC_ERR_MEM;
+    table = mempool_calloc(tc, tc->hash_size, sizeof(ngram_set));
+    if (table == NULL) {
         return TC_FALSE;
     }
-
-    table = tc->hash.table;
-    tc->hash.ngrams = 0;
-    for (i=0; i < tc->hash.size; i++) {
+    for (i=0; i < tc->hash_size; i++) {
+        table[i].first = NULL;
+        table[i].last  = NULL;
         table[i].total = 0;
-        table[i].size  = 0;
     }
+
+    tc->hash.table = table;
+    tc->hash.size  = tc->hash_size;
     return TC_TRUE; 
 }
 // }}}
@@ -143,15 +139,10 @@ static Bool textcat_init_hash(TextCat * tc)
 static void textcat_destroy_hash(TextCat * tc) 
 {
     int i;
-    ngram_set * table;
-    table = tc->hash.table;
+    ngram_t * entry;
     for (i=0; i < tc->hash.size; i++) {
-        if (table[i].size > 0) {
-            int e;
-            for (e=0; e < table[i].total; e++) {
-                printf("(%s)  (%d)\n", table[i].ngrams[e].str, table[i].ngrams[e].freq);
-            }
-            tc->free(table[i].ngrams);
+        for (entry = tc->hash.table[i].first; entry ; entry = entry->next) {
+            printf("(%s)  (%d)\n", entry->str, entry->freq);
         }
     }
 }

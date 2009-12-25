@@ -93,7 +93,6 @@ void * mempool_malloc(TextCat * tc, size_t size)
     pool->last->offset += size;
     pool->usage += size;
 
-
     return mmem;
 }
 // }}}

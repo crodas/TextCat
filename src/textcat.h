@@ -23,17 +23,17 @@
 #include <stdio.h>
 
 typedef struct {
-    long freq;
     unsigned char * str;
+    long freq;
     int len;
-    int status;
+    struct ngram_t * next;
 } ngram_t;
 
 typedef struct {
     /* linked list */
-    ngram_t * ngrams;
+    ngram_t * first;
+    ngram_t * last;
     long total;
-    long size;
 } ngram_set;
 
 typedef struct {
