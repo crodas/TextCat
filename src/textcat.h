@@ -27,7 +27,7 @@ typedef struct {
     size_t offset;
     int len;
     int status;
-} ngram;
+} ngram_t;
 
 typedef struct {
     /* memory */
@@ -36,14 +36,15 @@ typedef struct {
     long pool_offset;
     long pool_size;
     /* linked list */
-    ngram * ngrams;
+    ngram_t * ngrams;
     long total;
     long size;
 } ngram_set;
 
 typedef struct {
     ngram_set * table;
-    long total;
+    long size;
+    long ngrams;
 } ngram_hash;
 
 typedef struct {

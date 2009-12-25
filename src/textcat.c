@@ -21,12 +21,14 @@
 
 #include "textcat.h"
 
+/* Backward declarations {{{ */
 static long textcat_simple_hash(const uchar *p, int len);
-static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram ** item);
+static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram_t ** item);
+static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len, ngram_t ** item);
 static int textcat_ngram_incr(TextCat * tc, const uchar * key, int len);
-static ngram * textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len);
+/* }}} */
 
-// simple_hash(const uchar *p, int len) {{{
+// simple_hash(const uchar *, int) {{{
 /*
  * fast and furious little hash function
  *
@@ -43,10 +45,10 @@ static long textcat_simple_hash(const uchar *p, int len)
 }
 // }}}
 
-// textcat_find_ngram(const ngram_set * nset, const uchar * key, int len, ngram ** item) {{{
-static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram ** item)
+// textcat_find_ngram(const ngram_set *, const uchar *, int, ngram **) {{{
+static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram_t ** item)
 {
-    ngram * entry;
+    ngram_t * entry;
     long i;
     for (i=0; i < nset->total; i++) 
     {
@@ -63,10 +65,10 @@ static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int le
 }
 // }}}
 
-// textcat_ngram_incr(TextCat * tc, ngram_set * nset, const uchar * key, int len) {{{
-static int textcat_ngram_incr(TextCat * tc, const uchar * key, int len)
+// textcat_ngram_incr(TextCat *, ngram_set *, const uchar *, int) {{{
+static Bool textcat_ngram_incr(TextCat * tc, const uchar * key, int len)
 {
-    ngram * item;
+    ngram_t * item;
     ngram_set * nset;
     int spot;
     spot = textcat_simple_hash(key, len) & tc->hash_size;
@@ -74,25 +76,26 @@ static int textcat_ngram_incr(TextCat * tc, const uchar * key, int len)
     if (textcat_ngram_find(nset, key, len, &item) == TC_TRUE) {
         item->freq++;
     } else {
-        item = textcat_ngram_create(tc, nset, key, len);
+        if (textcat_ngram_create(tc, nset, key, len, &item)  == TC_FALSE) {
+            return TC_FALSE;
+        }
         item->freq++;
     }
+    return TC_TRUE;
 }
 // }}}
 
-// textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len) {{{
-static ngram * textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len)
+// textcat_ngram_create(TextCat *, ngram_set *, const uchar *, int, ngram **) {{{
+static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len, ngram_t ** item)
 {
-    ngram * item;
     if (nset->size == 0) {
         nset->size   = tc->ngram_precreate;
-        nset->ngrams = tc->calloc(nset->size, sizeof(ngram));
+        nset->ngrams = tc->calloc(nset->size, sizeof(ngram_t));
     } else if (nset->total+1 > nset->size) {
         nset->size  += tc->ngram_precreate;
-        nset->ngrams = tc->realloc(nset->ngrams, nset->size * sizeof(ngram));
+        nset->ngrams = tc->realloc(nset->ngrams, nset->size * sizeof(ngram_t));
     }
-    item = & nset->ngrams[nset->total];
-    
+
     /* Copy the String using our buffer */
     if  (nset->pool_size == 0) {
         nset->pool_size = tc->pool_preallocate_size;
@@ -102,15 +105,22 @@ static ngram * textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar 
         nset->pool       = tc->realloc(nset->pool, nset->pool_size  * sizeof(uchar));
     }
 
+    if (nset->pool == NULL || nset->pool == NULL) {
+        tc->last_status = TC_ERR_MEM;
+        return TC_FALSE;
+    }
+
+    *item = & nset->ngrams[nset->total];
     /* setup the new N-gram */
-    item->status = TC_BUSY;
-    item->freq   = 0;
-    item->len    = len;
-    item->offset = nset->pool_offset;
+    (*item)->status = TC_BUSY;
+    (*item)->freq   = 0;
+    (*item)->len    = len;
+    (*item)->offset = nset->pool_offset;
 
     strncpy(nset->pool + nset->pool_offset, key, len);
     nset->pool_offset += len;
     nset->pool_number++;
+    tc->hash.ngrams++;
 
     nset->total++;
 
@@ -125,7 +135,7 @@ static Bool textcat_init_hash(TextCat * tc)
     int i;
 
     tc->hash.table = tc->calloc(tc->hash_size+1, sizeof(ngram_set));
-    tc->hash.total = tc->hash_size;
+    tc->hash.size = tc->hash_size;
 
     if (tc->hash.table == NULL) {
         tc->last_status = TC_ERR_MEM;
@@ -133,7 +143,8 @@ static Bool textcat_init_hash(TextCat * tc)
     }
 
     table = tc->hash.table;
-    for (i=0; i < tc->hash.total; i++) {
+    tc->hash.ngrams = 0;
+    for (i=0; i < tc->hash.size; i++) {
         table[i].total = 0;
         table[i].size  = 0;
         table[i].pool_size = 0;
@@ -150,7 +161,7 @@ static void textcat_destroy_hash(TextCat * tc)
     int i;
     ngram_set * table;
     table = tc->hash.table;
-    for (i=0; i < tc->hash.total; i++) {
+    for (i=0; i < tc->hash.size; i++) {
         if (table[i].size > 0) {
             char xtable[50];
             int e;
@@ -165,6 +176,7 @@ static void textcat_destroy_hash(TextCat * tc)
             tc->free(table[i].pool);
         }
     }
+    tc->free(tc->hash.table);
 }
 // }}}
 
@@ -207,13 +219,15 @@ int TextCat_parse(TextCat * tc, const uchar * text, long length)
                 break;
             }
             if (textcat_ngram_incr(tc, t1, i) == TC_FALSE) {
+                textcat_destroy_hash(tc);
+                tc->status = TC_FREE;
+                return TC_FALSE;
             }
         }
         t1++;
     }
 
     textcat_destroy_hash(tc);
-    tc->free(tc->hash.table);
     tc->last_status = TC_OK;
     tc->status = TC_FREE;
     return TC_TRUE;
