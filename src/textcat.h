@@ -24,17 +24,12 @@
 
 typedef struct {
     long freq;
-    size_t offset;
+    unsigned char * str;
     int len;
     int status;
 } ngram_t;
 
 typedef struct {
-    /* memory */
-    unsigned char * pool; 
-    int pool_number;
-    long pool_offset;
-    long pool_size;
     /* linked list */
     ngram_t * ngrams;
     long total;
@@ -57,7 +52,7 @@ typedef struct {
     void * (*free)(void *);
     /* config issues */
     int ngram_precreate;
-    long pool_preallocate_size;
+    long allocate_size;
     int hash_size;
     int min_ngram_len;
     int max_ngram_len;
@@ -65,7 +60,6 @@ typedef struct {
     ngram_hash hash;
     /* status */
     int error;
-    int last_status;
     int status;
 } TextCat;
 
@@ -91,3 +85,6 @@ int TextCat_parse(TextCat * tc, const uchar * text, long length);
 
 extern Bool mempool_init(TextCat * tc);
 extern void mempool_done(TextCat * tc);
+void * mempool_malloc(TextCat * tc, size_t size);
+void * mempool_calloc(TextCat * tc, size_t nmemb, size_t size);
+uchar * mempool_strndup(TextCat * tc, uchar * key, size_t len);

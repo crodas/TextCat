@@ -56,7 +56,7 @@ static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int le
         if (entry->status == TC_FREE) {
             break;
         }
-        if (entry->len == len && strncmp(nset->pool + entry->offset, key, len) == 0) {
+        if (entry->len == len && strncmp(entry->str, key, len) == 0) {
             *item = entry;
             return TC_TRUE;
         }
@@ -96,34 +96,20 @@ static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * k
         nset->ngrams = tc->realloc(nset->ngrams, nset->size * sizeof(ngram_t));
     }
 
-    /* Copy the String using our buffer */
-    if  (nset->pool_size == 0) {
-        nset->pool_size = tc->pool_preallocate_size;
-        nset->pool      = tc->malloc(nset->pool_size * sizeof(uchar));
-    } else if (nset->pool_offset + len > nset->pool_size) {
-        nset->pool_size += tc->pool_preallocate_size;
-        nset->pool       = tc->realloc(nset->pool, nset->pool_size  * sizeof(uchar));
-    }
-
-    if (nset->pool == NULL || nset->pool == NULL) {
-        tc->last_status = TC_ERR_MEM;
-        return TC_FALSE;
-    }
-
     *item = & nset->ngrams[nset->total];
     /* setup the new N-gram */
+    (*item)->str    = mempool_strndup(tc, key, len);
     (*item)->status = TC_BUSY;
     (*item)->freq   = 0;
     (*item)->len    = len;
-    (*item)->offset = nset->pool_offset;
 
-    strncpy(nset->pool + nset->pool_offset, key, len);
-    nset->pool_offset += len;
-    nset->pool_number++;
+    if ((*item)->str == NULL || nset->ngrams == NULL) {
+        tc->error = TC_ERR_MEM;
+        return TC_FALSE;
+    }
+
     tc->hash.ngrams++;
-
     nset->total++;
-
     return item;
 }
 // }}}
@@ -134,11 +120,12 @@ static Bool textcat_init_hash(TextCat * tc)
     ngram_set * table;
     int i;
 
+    table  = mempool_calloc(tc, tc->hash_size, sizeof(ngram_set));
     tc->hash.table = tc->calloc(tc->hash_size+1, sizeof(ngram_set));
     tc->hash.size = tc->hash_size;
 
     if (tc->hash.table == NULL) {
-        tc->last_status = TC_ERR_MEM;
+        tc->error = TC_ERR_MEM;
         return TC_FALSE;
     }
 
@@ -147,9 +134,6 @@ static Bool textcat_init_hash(TextCat * tc)
     for (i=0; i < tc->hash.size; i++) {
         table[i].total = 0;
         table[i].size  = 0;
-        table[i].pool_size = 0;
-        table[i].pool_number = 0;
-        table[i].pool_offset = 0;
     }
     return TC_TRUE; 
 }
@@ -163,20 +147,13 @@ static void textcat_destroy_hash(TextCat * tc)
     table = tc->hash.table;
     for (i=0; i < tc->hash.size; i++) {
         if (table[i].size > 0) {
-            char xtable[50];
             int e;
             for (e=0; e < table[i].total; e++) {
-                strncpy(xtable, table[i].pool + table[i].ngrams[e].offset, table[i].ngrams[e].len); 
-                xtable[  table[i].ngrams[e].len ] = '\0';
-                printf("(%s)  (%d)\n", xtable, table[i].ngrams[e].freq);
+                printf("(%s)  (%d)\n", table[i].ngrams[e].str, table[i].ngrams[e].freq);
             }
             tc->free(table[i].ngrams);
         }
-        if (table[i].pool_size > 0) {
-            tc->free(table[i].pool);
-        }
     }
-    tc->free(tc->hash.table);
 }
 // }}}
 
@@ -190,12 +167,16 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->realloc = realloc;
     tc->free    = free;
     tc->ngram_precreate = TC_NGRAM_PRECREATE;
-    tc->pool_preallocate_size = TC_BUFFER_SIZE;
-    tc->hash_size = TC_HASH_SIZE;
-    tc->min_ngram_len = MIN_NGRAM_LEN;
-    tc->max_ngram_len = MAX_NGRAM_LEN;
-    tc->last_status = TC_OK;
-    tc->status = TC_FREE;
+    tc->allocate_size   = TC_BUFFER_SIZE;
+    tc->hash_size       = TC_HASH_SIZE;
+    tc->min_ngram_len   = MIN_NGRAM_LEN;
+    tc->max_ngram_len   = MAX_NGRAM_LEN;
+    tc->error   = TC_OK;
+    tc->status  = TC_FREE;
+    if (mempool_init(tc) == TC_FALSE) {
+        free(tc);
+        return TC_FALSE;
+    }
     *tcc = tc;
     return TC_TRUE;
 }
@@ -228,7 +209,7 @@ int TextCat_parse(TextCat * tc, const uchar * text, long length)
     }
 
     textcat_destroy_hash(tc);
-    tc->last_status = TC_OK;
+    tc->error  = TC_OK;
     tc->status = TC_FREE;
     return TC_TRUE;
 }
@@ -236,6 +217,7 @@ int TextCat_parse(TextCat * tc, const uchar * text, long length)
 // TextCat_Destroy(TextCat * tc) {{{
 Bool TextCat_Destroy(TextCat * tc) 
 {
+    mempool_done(tc);
     free(tc);
 }
 // }}}
