@@ -43,8 +43,10 @@ typedef struct {
 } ngram_hash;
 
 typedef struct {
-    /* pool of memory */
+    /* pools of memory */
     void * memory;
+    void * result;
+
     /* callback */
     void * (*malloc)(size_t);
     void * (*free)(void *);
@@ -60,15 +62,22 @@ typedef struct {
     int status;
 } TextCat;
 
+
 typedef struct {
-    unsigned char ** str;
-    long *  freq;
-    long total;
+    unsigned char * str;
+    int size;
+    long freq;
+    long position;
 } NGram;
 
+typedef struct {
+    NGram * ngram;
+    long size;
+} NGrams;
 
-#define TC_HASH_SIZE        100
-#define TC_BUFFER_SIZE      (16 * 1024) 
+
+#define TC_HASH_SIZE    100
+#define TC_BUFFER_SIZE  (16 * 1024) 
 #define Bool            int
 #define uchar           unsigned char
 #define TC_TRUE         1
@@ -83,7 +92,7 @@ typedef struct {
 
 Bool TextCat_Init(TextCat ** tc);
 Bool TextCat_Destroy(TextCat * tc);
-int TextCat_parse(TextCat * tc, const uchar * text, long length, NGram ** ngram);
+int TextCat_parse(TextCat * tc, const uchar * text, long length, NGrams ** ngram);
 
 extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
 extern void mempool_done(void * memory);

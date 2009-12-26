@@ -22,12 +22,17 @@
 #include "textcat.h"
 
 #define CHECK_MEM(x)   if (x == NULL) { tc->error = TC_ERR_MEM; return TC_FALSE;  }
+#define CHECK_MEM_EX(x,Y)   if (x == NULL) { tc->error = TC_ERR_MEM; Y; return TC_FALSE;  }
 
 /* Backward declarations {{{ */
 static long textcat_simple_hash(const uchar *p, int len);
 static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram_t ** item);
 static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len, ngram_t ** item);
 static int textcat_ngram_incr(TextCat * tc, const uchar * key, int len);
+static Bool textcat_copy_result(TextCat * tc, NGrams ** result);
+static void textcat_sort_result(NGrams * ngrams);
+static int textcat_qsort_fnc(const void * a, const void * b);
+
 /* }}} */
 
 // simple_hash(const uchar *, int) {{{
@@ -143,15 +148,49 @@ static Bool textcat_init_hash(TextCat * tc)
 // textcat_destroy_hash(TextCat * tc)  {{{
 static void textcat_destroy_hash(TextCat * tc) 
 {
-    int i;
+    mempool_done(tc->memory);
+}
+// }}}
+
+//textcat_copy_result(TextCat * tc, NGrams ** result) {{{
+static Bool textcat_copy_result(TextCat * tc, NGrams ** result)
+{
+    NGrams * ngrams;
     ngram_t * entry;
-    for (i=0; i < tc->hash.size; i++) {
+    int i, e;
+
+    ngrams = (NGrams *) mempool_malloc(tc->result, sizeof(NGrams));
+    CHECK_MEM(ngrams);
+    ngrams->ngram = (NGram *) mempool_calloc(tc->result, tc->hash.ngrams, sizeof(NGram));
+    CHECK_MEM(ngrams->ngram);
+    ngrams->size = tc->hash.ngrams;
+
+    for (i=0, e=0; i < tc->hash.size; i++) {
         for (entry = tc->hash.table[i].first; entry ; entry = entry->next) {
-            printf("(%s)  (%d)\n", entry->str, entry->freq);
+            ngrams->ngram[e].str      = mempool_strndup(tc->result, entry->str, entry->len);
+            ngrams->ngram[e].freq     = entry->freq;
+            ngrams->ngram[e].position = 0;
+            CHECK_MEM(ngrams->ngram[e].str);
+            e++;
         }
     }
-    printf("Ngrams: %d\n", tc->hash.ngrams);
-    mempool_done(tc->memory);
+    *result = ngrams;
+    return TC_TRUE;
+}
+// }}}
+
+// Sorting {{{
+static int textcat_qsort_fnc(const void * a, const void * b)
+{
+    NGram *aa, *bb;
+    aa = (NGram *) a;
+    bb = (NGram *) b;
+    return bb->freq - aa->freq;
+}
+
+static void textcat_sort_result(NGrams * ngrams)
+{
+    qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc);
 }
 // }}}
 
@@ -171,12 +210,14 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->max_ngram_len = MAX_NGRAM_LEN;
     tc->error         = TC_OK;
     tc->status        = TC_FREE;
+    tc->result        = NULL;
     *tcc = tc;
     return TC_TRUE;
 }
 // }}}
 
-int TextCat_parse(TextCat * tc, const uchar * text, long length,  NGram ** ngrams)
+// TextCat_parse(TextCat * tc, const uchar * text, long length,  NGrams ** ngrams) {{{
+int TextCat_parse(TextCat * tc, const uchar * text, long length,  NGrams ** ngrams)
 {
     uchar *t1;
     int i;
@@ -187,6 +228,10 @@ int TextCat_parse(TextCat * tc, const uchar * text, long length,  NGram ** ngram
         return TC_FALSE;
     }
 
+    if (tc->result == NULL) {
+        mempool_init(&tc->result, tc->malloc, tc->free, tc->allocate_size);
+        CHECK_MEM_EX(tc->result, textcat_destroy_hash(tc); tc->status=TC_FREE; )
+    }
     t1 = text;
     while (*t1) {
         for (i=tc->min_ngram_len; i <= tc->max_ngram_len; i++) {
@@ -201,16 +246,26 @@ int TextCat_parse(TextCat * tc, const uchar * text, long length,  NGram ** ngram
         }
         t1++;
     }
+    if (textcat_copy_result(tc, ngrams) == TC_FALSE) {
+        textcat_destroy_hash(tc);
+        tc->status = TC_FREE;
+        return TC_FALSE;
+    }
+    textcat_sort_result(*ngrams);
 
     textcat_destroy_hash(tc);
     tc->error  = TC_OK;
     tc->status = TC_FREE;
     return TC_TRUE;
 }
+// }}}
 
 // TextCat_Destroy(TextCat * tc) {{{
 Bool TextCat_Destroy(TextCat * tc) 
 {
+    if (tc->result != NULL) {
+        mempool_done(tc->result);
+    }
     free(tc);
 }
 // }}}
