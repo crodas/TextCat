@@ -85,9 +85,10 @@ Bool TextCat_Init(TextCat ** tc);
 Bool TextCat_Destroy(TextCat * tc);
 int TextCat_parse(TextCat * tc, const uchar * text, long length, NGram ** ngram);
 
-extern Bool mempool_init(TextCat * tc);
-extern void mempool_done(TextCat * tc);
-void * mempool_malloc(TextCat * tc, size_t size);
-void * mempool_calloc(TextCat * tc, size_t nmemb, size_t size);
-uchar * mempool_strndup(TextCat * tc, uchar * key, size_t len);
-void mempool_reset(TextCat * tc);
+extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
+extern void mempool_done(void * memory);
+void * mempool_calloc(void * memory, size_t nmemb, size_t size);
+void * mempool_malloc(void * memory, size_t size);
+uchar * mempool_strndup(void * memory, uchar * key, size_t len);
+void mempool_reset(void * memory);
+

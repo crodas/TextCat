@@ -14,9 +14,6 @@
    +----------------------------------------------------------------------+
    | Author:  César Rodas <crodas@member.fsf.org>                         |
    +----------------------------------------------------------------------+
-   | Based on the LibTextCat project,                                     |
-   | Copyright (c) 2003, WiseGuys Internet B.V.                           |
-   +----------------------------------------------------------------------+
  */
 
 #include "textcat.h"
@@ -32,71 +29,67 @@ typedef struct mempool {
     memblock * first;
     memblock * last;
     size_t size;
-    size_t usage;
+    size_t offset;
     size_t blocks;
     /* callback */
     void * (*malloc)(size_t);
     void * (*free)(void *);
+    size_t block_size;
 } mempool;
 
-static Bool mempool_add_memblock (TextCat * tc, size_t rsize);
+static Bool mempool_add_memblock (mempool * pool, size_t rsize);
 
-// Bool mempool_init(TextCat * tc) {{{
-extern Bool mempool_init(TextCat * tc)
+//mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size) {{{
+extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size)
 {
     mempool * mem;
-    mem = tc->malloc(sizeof(mempool));
+    mem = xmalloc(sizeof(mempool));
     if (mem == NULL) {
-        tc->error = TC_ERR_MEM;
+        *memory = NULL;
         return TC_FALSE;
     }
-    mem->first  = NULL;
-    mem->last   = NULL;
-    mem->blocks = 0;
-    mem->usage  = 0;
-    mem->size   = 0;
-    mem->free   = free;
-    mem->malloc = malloc;
-    tc->memory  = (void *)mem;
+    mem->first      = NULL;
+    mem->last       = NULL;
+    mem->blocks     = 0;
+    mem->offset     = 0;
+    mem->size       = 0;
+    mem->free       = xfree;
+    mem->malloc     = xmalloc;
+    mem->block_size = block_size;
+    *memory  = (void *)mem;
     return TC_TRUE;
 }
 // }}}
 
-void mempool_set_functions(TextCat * tc, void * (*xmalloc)(size_t), void * (*xfree)(void *))
+// mempool_done(void * memory) {{{
+extern void mempool_done(void * memory)
 {
     mempool * mem;
-    mem = tc->memory;
-    tc->malloc = xmalloc;
-    tc->free   = xfree;
-}
-
-// mempool_done(TextCat * tc) {{{
-extern void mempool_done(TextCat * tc)
-{
-    mempool * mem;
-    mem = tc->memory;
+    mem = memory;
+    void * (*xfree)(size_t);
+    xfree = mem->free;
     if (mem->blocks > 0) {
         memblock * mem1, * mem2;
         mem1 = mem->first;
         while (mem1) {
             mem2 = mem1->next;
             if (mem1->size > 0) {
-                tc->free(mem1->pool);
+                xfree(mem1->pool);
             }
-            tc->free(mem1);
+            xfree(mem1);
             mem1 = mem2;
         }
     }
-    tc->free(mem);
+    xfree(memory);
 }
 // }}}
 
-// mempool_reset(TextCat * tc) {{{
-void mempool_reset(TextCat * tc)
+// mempool_reset(void * memory) {{{
+void mempool_reset(void * memory)
 {
     mempool * pool;
     memblock * block, * next;
-    pool  = (mempool *) tc->memory;
+    pool  = (mempool *) memory;
     block = pool->first;
     if (block == NULL) {
         return;
@@ -106,41 +99,41 @@ void mempool_reset(TextCat * tc)
         pool->blocks--;
         pool->size -= block->size;
         if (block->size > 0) {
-            tc->free(block->pool);
+            pool->free(block->pool);
         }
         next = block->next;
-        tc->free(block);
+        pool->free(block);
     }
     pool->last  = pool->first;
-    pool->usage = 0;
+    pool->offset = 0;
 
 }
 // }}}
 
-// mempool_malloc(TextCat * tc, size_t size) {{{
-void * mempool_malloc(TextCat * tc, size_t size)
+// mempool_malloc(void * memory, size_t size) {{{
+void * mempool_malloc(void * memory, size_t size)
 {
     mempool * pool;
     void  * mmem;
     size_t free; 
-    pool  = (mempool *) tc->memory;
-    free  = pool->size - pool->usage;
-    if (free < size && mempool_add_memblock(tc, size) == TC_FALSE) {
+    pool  = (mempool *) memory;
+    free  = pool->size - pool->offset;
+    if (free < size && mempool_add_memblock(pool, size) == TC_FALSE) {
         return NULL;
-    }
+    } 
     mmem = pool->last->pool +  pool->last->offset;
     pool->last->offset += size;
-    pool->usage += size;
+    pool->offset += size;
 
     return mmem;
 }
 // }}}
 
-// mempool_calloc(TextCat * tc, size_t nmemb, size_t size) {{{
-void * mempool_calloc(TextCat * tc, size_t nmemb, size_t size)
+// mempool_calloc(void * memory, size_t nmemb, size_t size) {{{
+void * mempool_calloc(void * memory, size_t nmemb, size_t size)
 {
     void * mem;
-    mem = mempool_malloc(tc, nmemb * size);
+    mem = mempool_malloc(memory, nmemb * size);
     if (mem != NULL) {
         memset(mem, 0, nmemb * size);
     }
@@ -148,11 +141,11 @@ void * mempool_calloc(TextCat * tc, size_t nmemb, size_t size)
 }
 // }}}
 
-// mempool_strndup(TextCat * tc, uchar * key, size_t len) {{{
-uchar * mempool_strndup(TextCat * tc, uchar * key, size_t len)
+// mempool_strndup(void * memory, uchar * key, size_t len) {{{
+uchar * mempool_strndup(void * memory, uchar * key, size_t len)
 {
     uchar * mem;
-    mem = mempool_malloc(tc, len + 1);
+    mem = mempool_malloc(memory, len + 1);
     if (mem == NULL) {
         return NULL;
     }
@@ -162,26 +155,22 @@ uchar * mempool_strndup(TextCat * tc, uchar * key, size_t len)
 }
 // }}}
 
-// mempool_add_memblock (TextCat * tc, size_t rsize) {{{
-static Bool mempool_add_memblock (TextCat * tc, size_t rsize)
+//mempool_add_memblock (mempool * pool, size_t rsize) {{{
+static Bool mempool_add_memblock (mempool * pool, size_t rsize)
 {
     size_t size;
     memblock * mem;
-    mempool  * pool;
-    size = tc->allocate_size > rsize ? tc->allocate_size : rsize;
-    pool = (mempool *) tc->memory;
-    mem  = (memblock *) tc->malloc( sizeof(memblock) );
+    size = pool->block_size > rsize ? pool->block_size : rsize;
+    mem  = (memblock *) pool->malloc( sizeof(memblock) );
     if (mem == NULL) {
-        tc->error = TC_ERR_MEM;
         return TC_FALSE;
     }
     mem->size   = size;
     mem->offset = 0;
     mem->next   = NULL;
-    mem->pool   = (void *) tc->malloc( size );
+    mem->pool   = (void *) pool->malloc( size );
     if (mem->pool == NULL) {
-        tc->error = TC_ERR_MEM;
-        tc->free(mem);
+        pool->free(mem);
         return TC_FALSE;
     }
     if (pool->first == NULL) {
@@ -190,9 +179,9 @@ static Bool mempool_add_memblock (TextCat * tc, size_t rsize)
     if (pool->last != NULL) {
         pool->last->next = mem;
     }
-    pool->last  = mem;
-    pool->usage = pool->size; /* Just the last block is free */
-    pool->size += size;
+    pool->last   = mem;
+    pool->offset = pool->size; /* Just the last block is free */
+    pool->size  += size;
     pool->blocks++;
     return TC_TRUE;
 }

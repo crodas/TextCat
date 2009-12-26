@@ -21,6 +21,8 @@
 
 #include "textcat.h"
 
+#define CHECK_MEM(x)   if (x == NULL) { tc->error = TC_ERR_MEM; return TC_FALSE;  }
+
 /* Backward declarations {{{ */
 static long textcat_simple_hash(const uchar *p, int len);
 static Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, int len, ngram_t ** item);
@@ -85,19 +87,17 @@ static Bool textcat_ngram_incr(TextCat * tc, const uchar * key, int len)
 static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, int len, ngram_t ** ritem)
 {
     ngram_t * item;
-    item = mempool_malloc(tc, sizeof(ngram_t));
-    if (item == NULL) {
-        return TC_FALSE;
-    }
+    item = mempool_malloc(tc->memory, sizeof(ngram_t));
+    CHECK_MEM(item)
+
     /* setup the new N-gram */
-    item->str  = mempool_strndup(tc, key, len);
+    item->str  = mempool_strndup(tc->memory, key, len);
     item->freq = 0;
     item->len  = len;
     item->next = NULL;
 
-    if (item->str == NULL) {
-        return TC_FALSE;
-    }
+    CHECK_MEM(item->str);
+
     if (nset->first == NULL) {
         nset->first = item;
     }
@@ -119,12 +119,14 @@ static Bool textcat_init_hash(TextCat * tc)
     ngram_set * table;
     int i;
 
-    mempool_reset(tc);
 
-    table = mempool_calloc(tc, tc->hash_size, sizeof(ngram_set));
-    if (table == NULL) {
-        return TC_FALSE;
-    }
+    mempool_init(&tc->memory, tc->malloc, tc->free, tc->allocate_size);
+    CHECK_MEM(tc->memory)
+
+    table = mempool_calloc(tc->memory, tc->hash_size, sizeof(ngram_set));
+
+    CHECK_MEM(table)
+
     for (i=0; i < tc->hash_size; i++) {
         table[i].first = NULL;
         table[i].last  = NULL;
@@ -149,6 +151,7 @@ static void textcat_destroy_hash(TextCat * tc)
         }
     }
     printf("Ngrams: %d\n", tc->hash.ngrams);
+    mempool_done(tc->memory);
 }
 // }}}
 
@@ -157,18 +160,17 @@ Bool TextCat_Init(TextCat ** tcc)
 {
     TextCat * tc;
     tc = (TextCat *) malloc(sizeof(TextCat));
-    tc->malloc          = malloc;
-    tc->free            = free;
-    tc->allocate_size   = TC_BUFFER_SIZE;
-    tc->hash_size       = TC_HASH_SIZE;
-    tc->min_ngram_len   = MIN_NGRAM_LEN;
-    tc->max_ngram_len   = MAX_NGRAM_LEN;
-    tc->error   = TC_OK;
-    tc->status  = TC_FREE;
-    if (mempool_init(tc) == TC_FALSE) {
-        free(tc);
+    if (tc == NULL) {
         return TC_FALSE;
     }
+    tc->malloc        = malloc;
+    tc->free          = free;
+    tc->allocate_size = TC_BUFFER_SIZE;
+    tc->hash_size     = TC_HASH_SIZE;
+    tc->min_ngram_len = MIN_NGRAM_LEN;
+    tc->max_ngram_len = MAX_NGRAM_LEN;
+    tc->error         = TC_OK;
+    tc->status        = TC_FREE;
     *tcc = tc;
     return TC_TRUE;
 }
@@ -209,7 +211,6 @@ int TextCat_parse(TextCat * tc, const uchar * text, long length,  NGram ** ngram
 // TextCat_Destroy(TextCat * tc) {{{
 Bool TextCat_Destroy(TextCat * tc) 
 {
-    mempool_done(tc);
     free(tc);
 }
 // }}}
