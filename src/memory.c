@@ -34,6 +34,9 @@ typedef struct mempool {
     size_t size;
     size_t usage;
     size_t blocks;
+    /* callback */
+    void * (*malloc)(size_t);
+    void * (*free)(void *);
 } mempool;
 
 static Bool mempool_add_memblock (TextCat * tc, size_t rsize);
@@ -52,10 +55,20 @@ extern Bool mempool_init(TextCat * tc)
     mem->blocks = 0;
     mem->usage  = 0;
     mem->size   = 0;
+    mem->free   = free;
+    mem->malloc = malloc;
     tc->memory  = (void *)mem;
     return TC_TRUE;
 }
 // }}}
+
+void mempool_set_functions(TextCat * tc, void * (*xmalloc)(size_t), void * (*xfree)(void *))
+{
+    mempool * mem;
+    mem = tc->memory;
+    tc->malloc = xmalloc;
+    tc->free   = xfree;
+}
 
 // mempool_done(TextCat * tc) {{{
 extern void mempool_done(TextCat * tc)
@@ -75,6 +88,32 @@ extern void mempool_done(TextCat * tc)
         }
     }
     tc->free(mem);
+}
+// }}}
+
+// mempool_reset(TextCat * tc) {{{
+void mempool_reset(TextCat * tc)
+{
+    mempool * pool;
+    memblock * block, * next;
+    pool  = (mempool *) tc->memory;
+    block = pool->first;
+    if (block == NULL) {
+        return;
+    }
+    block->offset = 0;
+    for (block = pool->first->next; block; block = next) {
+        pool->blocks--;
+        pool->size -= block->size;
+        if (block->size > 0) {
+            tc->free(block->pool);
+        }
+        next = block->next;
+        tc->free(block);
+    }
+    pool->last  = pool->first;
+    pool->usage = 0;
+
 }
 // }}}
 
@@ -142,7 +181,7 @@ static Bool mempool_add_memblock (TextCat * tc, size_t rsize)
     mem->pool   = (void *) tc->malloc( size );
     if (mem->pool == NULL) {
         tc->error = TC_ERR_MEM;
-        free(mem);
+        tc->free(mem);
         return TC_FALSE;
     }
     if (pool->first == NULL) {

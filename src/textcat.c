@@ -67,7 +67,7 @@ static Bool textcat_ngram_incr(TextCat * tc, const uchar * key, int len)
     ngram_t * item;
     ngram_set * nset;
     int spot;
-    spot = textcat_simple_hash(key, len) & tc->hash_size;
+    spot = textcat_simple_hash(key, len) & (tc->hash_size - 1);
     nset = &(tc->hash.table[spot]);
     if (textcat_ngram_find(nset, key, len, &item) == TC_TRUE) {
         item->freq++;
@@ -107,8 +107,8 @@ static Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * k
     *ritem = item;
     nset->last = item;
     nset->total++;
-
     tc->hash.ngrams++;
+
     return TC_TRUE;
 } 
 // }}}
@@ -118,6 +118,8 @@ static Bool textcat_init_hash(TextCat * tc)
 {
     ngram_set * table;
     int i;
+
+    mempool_reset(tc);
 
     table = mempool_calloc(tc, tc->hash_size, sizeof(ngram_set));
     if (table == NULL) {
@@ -129,8 +131,9 @@ static Bool textcat_init_hash(TextCat * tc)
         table[i].total = 0;
     }
 
-    tc->hash.table = table;
-    tc->hash.size  = tc->hash_size;
+    tc->hash.table  = table;
+    tc->hash.ngrams = 0;
+    tc->hash.size   = tc->hash_size;
     return TC_TRUE; 
 }
 // }}}
@@ -145,6 +148,7 @@ static void textcat_destroy_hash(TextCat * tc)
             printf("(%s)  (%d)\n", entry->str, entry->freq);
         }
     }
+    printf("Ngrams: %d\n", tc->hash.ngrams);
 }
 // }}}
 
@@ -153,11 +157,8 @@ Bool TextCat_Init(TextCat ** tcc)
 {
     TextCat * tc;
     tc = (TextCat *) malloc(sizeof(TextCat));
-    tc->calloc  = calloc;
-    tc->malloc  = malloc;
-    tc->realloc = realloc;
-    tc->free    = free;
-    tc->ngram_precreate = TC_NGRAM_PRECREATE;
+    tc->malloc          = malloc;
+    tc->free            = free;
     tc->allocate_size   = TC_BUFFER_SIZE;
     tc->hash_size       = TC_HASH_SIZE;
     tc->min_ngram_len   = MIN_NGRAM_LEN;
@@ -173,7 +174,7 @@ Bool TextCat_Init(TextCat ** tcc)
 }
 // }}}
 
-int TextCat_parse(TextCat * tc, const uchar * text, long length)
+int TextCat_parse(TextCat * tc, const uchar * text, long length,  NGram ** ngrams)
 {
     uchar *t1;
     int i;
