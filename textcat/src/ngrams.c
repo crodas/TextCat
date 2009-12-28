@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2008 The PHP Group                                |
+   | Copyright (c) 1997-2010 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -14,9 +14,6 @@
    +----------------------------------------------------------------------+
    | Author:  César Rodas <crodas@member.fsf.org>                         |
    +----------------------------------------------------------------------+
-   | Based on the LibTextCat project,                                     |
-   | Copyright (c) 2003, WiseGuys Internet B.V.                           |
-   +----------------------------------------------------------------------+
  */
 
 #include "textcat.h"
@@ -25,19 +22,13 @@
 #define CHECK_MEM_EX(x,Y)   if (x == NULL) { tc->error = TC_ERR_MEM; Y; return TC_FALSE;  }
 
 // simple_hash(const uchar *, int) {{{
-/*
- * fast and furious little hash function
- *
- * (Note that we could use some kind of rolling checksum, and update it
- * during n-gram construction) 
- */
-long textcat_simple_hash(const uchar *p, size_t len)
+long textcat_simple_hash(const uchar *str, size_t len, size_t max_number)
 {
-	long h = len * 13;
-	while (*p && len-- > 0) {
-		h = (h<<5)-h + *p++;
+	long hash = len * 13;
+	while (*str && len-- > 0) {
+		hash = (hash<<5)-hash + *str++;
 	}
-	return (long)h;
+	return (long)hash & max_number;
 }
 // }}}
 
@@ -63,7 +54,7 @@ Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len)
     ngram_t * item;
     ngram_set * nset;
     int spot;
-    spot = textcat_simple_hash(key, len) & (tc->hash_size - 1);
+    spot = textcat_simple_hash(key, len, tc->hash_size - 1);
     nset = &(tc->hash.table[spot]);
     if (textcat_ngram_find(nset, key, len, &item) == TC_TRUE) {
         item->freq++;

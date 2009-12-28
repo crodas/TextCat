@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2008 The PHP Group                                |
+   | Copyright (c) 1997-2010 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -14,9 +14,6 @@
    +----------------------------------------------------------------------+
    | Author:  César Rodas <crodas@member.fsf.org>                         |
    +----------------------------------------------------------------------+
-   | Based on the LibTextCat project,                                     |
-   | Copyright (c) 2003, WiseGuys Internet B.V.                           |
-   +----------------------------------------------------------------------+
  */
 
 #include "textcat.h"
@@ -25,7 +22,7 @@
 #define CHECK_MEM_EX(x,Y)   if (x == NULL) { tc->error = TC_ERR_MEM; Y; return TC_FALSE;  }
 
 /* Backward declarations {{{ */
-long textcat_simple_hash(const uchar *p, size_t len);
+long textcat_simple_hash(const uchar *p, size_t len, size_t max_number);
 Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
 Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
 int textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len);
@@ -146,7 +143,7 @@ static int textcat_default_text_parser(TextCat *tc, const uchar * text, size_t l
         }
     }
     length = e;
-    /* extract the ngrams, and pass-it to the library (with the callback */
+    /* extract the ngrams, and pass-it to the library (with the callback) */
     for (e=0; e < length; e++) {
         for (i=tc->min_ngram_len; i <= tc->max_ngram_len; i++) {
             if (length-e < tc->min_ngram_len) {

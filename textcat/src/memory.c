@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | PHP Version 5                                                        |
    +----------------------------------------------------------------------+
-   | Copyright (c) 1997-2008 The PHP Group                                |
+   | Copyright (c) 1997-2010 The PHP Group                                |
    +----------------------------------------------------------------------+
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -166,7 +166,8 @@ static Bool mempool_add_memblock (mempool * pool, size_t rsize)
         return TC_FALSE;
     }
     mem->size   = size;
-    mem->offset = 0;
+    /* offset is never 0, to avoid free() from out of the memory library */
+    mem->offset = 1; 
     mem->next   = NULL;
     mem->pool   = (void *) pool->malloc( size );
     if (mem->pool == NULL) {
