@@ -50,6 +50,7 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->hash_size     = TC_HASH_SIZE;
     tc->min_ngram_len = MIN_NGRAM_LEN;
     tc->max_ngram_len = MAX_NGRAM_LEN;
+    tc->max_ngrams    = TC_MAX_NGRAMS;
     tc->error         = TC_OK;
     tc->status        = TC_FREE;
     tc->result        = NULL;
@@ -95,44 +96,66 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
 // TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams) {{{
 int TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
 {
-    int rc;
-    size_t bytes, size;
-    void * buffer;
+    int fd;
+    size_t bytes;
+    uchar * buffer;
+    struct stat info;
 
-    rc = open(filename, O_ASYNC | ~O_CREAT);
-    if (rc == -1) {
+    fd = open(filename, O_RDONLY);
+    if (fd == -1) {
         tc->error = TC_NO_FILE;
         return TC_FALSE;
     }
-    bytes = read(rc, buffer, size);
-    if (bytes != size) {
+    if (fstat(fd, &info) == -1) {
+        tc->error = TC_NO_FILE;
+        return TC_FALSE;
+    }
+    buffer = malloc(info.st_size + 1);
+    bytes  = read(fd, buffer, info.st_size);
+    if (bytes != info.st_size) {
         free(buffer);
         tc->error = TC_ERR_FILE_SIZE;
         return TC_FALSE;
     }
-    close(rc);
-    rc = TextCat_parse(tc, buffer, size, ngrams);
+    close(fd);
+    *(buffer+bytes) = '\0';
+    fd = TextCat_parse(tc, buffer, bytes, ngrams);
     free(buffer);
-    return rc;
+    return fd;
 }
 // }}}
 
 // Default Parsing text callback {{{
 static int textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
 {
-    int i;
-    uchar * t1;
-    t1 = text;
-    while (*t1) {
+    int i,e;
+    uchar *ntext;
+    /* create a copy of the text in order to do a best-effort
+     * to clean it, setting everything to lower-case, removing
+     * non-alpha and whitespaces.
+     */
+    ntext = mempool_strndup(tc->memory, text, length);
+    for (i=0, e=0; i < length; i++) {
+        if (isalpha(ntext[i])) {
+            ntext[e++] = tolower(ntext[i]);
+        }
+        if (isblank(text[i])) {
+            while (isblank(ntext[++i]));
+            ntext[e++] = ' ';
+            --i;
+        }
+    }
+    length = e;
+    /* extract the ngrams, and pass-it to the library (with the callback */
+    for (e=0; e < length; e++) {
         for (i=tc->min_ngram_len; i <= tc->max_ngram_len; i++) {
-            if (t1-text > length-i) {
+            if (length-e < tc->min_ngram_len) {
                 break;
             }
-            if (set_ngram(tc, t1, i) == TC_FALSE) {
+            if (set_ngram(tc, ntext+e, i) == TC_FALSE) {
                 return TC_FALSE;
             }
         }
-        t1++;
     }
     return TC_TRUE;
 }

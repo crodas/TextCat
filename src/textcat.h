@@ -29,6 +29,7 @@
 // Definitions {{{
 #define TC_HASH_SIZE    100
 #define TC_BUFFER_SIZE  (16 * 1024) 
+#define TC_MAX_NGRAMS   400
 #define Bool            int
 #define uchar           unsigned char
 #define TC_TRUE         1
@@ -80,6 +81,7 @@ typedef struct TextCat {
     int hash_size;
     int min_ngram_len;
     int max_ngram_len;
+    int max_ngrams;
     /* internal stuff */
     ngram_hash hash;
     /* status */
