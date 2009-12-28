@@ -2,7 +2,7 @@
 
 int main()
 {
-    char  * text[] = {"cesar cesar cesar cesar", "another foobar testing"};
+    char  * text[] = {"Have you tried turn it off and on again", "another foobar testing"};
     TextCat * tc;
     NGrams * t1, * t2;
     int i;

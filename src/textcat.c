@@ -92,6 +92,31 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
 }
 // }}}
 
+// TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams) {{{
+int TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
+{
+    int rc;
+    size_t bytes, size;
+    void * buffer;
+
+    rc = open(filename, O_ASYNC | ~O_CREAT);
+    if (rc == -1) {
+        tc->error = TC_NO_FILE;
+        return TC_FALSE;
+    }
+    bytes = read(rc, buffer, size);
+    if (bytes != size) {
+        free(buffer);
+        tc->error = TC_ERR_FILE_SIZE;
+        return TC_FALSE;
+    }
+    close(rc);
+    rc = TextCat_parse(tc, buffer, size, ngrams);
+    free(buffer);
+    return rc;
+}
+// }}}
+
 // Default Parsing text callback {{{
 static int textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
 {

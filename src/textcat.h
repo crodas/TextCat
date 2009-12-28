@@ -21,6 +21,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 // Definitions {{{
 #define TC_HASH_SIZE    100
@@ -29,13 +33,16 @@
 #define uchar           unsigned char
 #define TC_TRUE         1
 #define TC_FALSE        0
-#define TC_OK           TC_TRUE
-#define TC_ERR          -1
-#define TC_ERR_MEM      -2
 #define TC_FREE         1
 #define TC_BUSY         0
 #define MIN_NGRAM_LEN   2
 #define MAX_NGRAM_LEN   5
+
+#define TC_OK               TC_TRUE
+#define TC_ERR              -1
+#define TC_ERR_MEM          -2
+#define TC_NO_FILE          -3
+#define TC_ERR_FILE_SIZE    -4
 // }}}
 
 // Data types {{{
