@@ -131,6 +131,7 @@ void textcat_sort_result(NGrams * ngrams);
 int textcat_qsort_fnc_freq(const void * a, const void * b);
 int textcat_qsort_fnc_str(const void * a, const void * b);
 Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
+Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
 /* }}} */
 
 

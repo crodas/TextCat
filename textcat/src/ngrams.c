@@ -49,7 +49,7 @@ Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, n
 // }}}
 
 // textcat_ngram_incr(TextCat *, ngram_set *, const uchar *, size_t) {{{
-Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len)
+Bool textcat_ngram_incr_ex(TextCat * tc, const uchar * key, size_t len, long freq)
 {
     ngram_t * item;
     ngram_set * nset;
@@ -57,16 +57,21 @@ Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len)
     spot = textcat_simple_hash(key, len, tc->hash_size - 1);
     nset = &(tc->hash.table[spot]);
     if (textcat_ngram_find(nset, key, len, &item) == TC_TRUE) {
-        item->freq++;
+        item->freq += freq;
     } else {
         if (textcat_ngram_create(tc, nset, key, len, &item)  == TC_FALSE) {
             return TC_FALSE;
         }
-        item->freq++;
+        item->freq += freq;
     }
     return TC_TRUE;
 }
-// }}}
+
+Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len)
+{
+    return textcat_ngram_incr_ex(tc, key, len, 1);
+}
+// }}} 
 
 // textcat_ngram_create(TextCat *, ngram_set *, const uchar *, int, ngram **) {{{
 Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** ritem)
@@ -149,6 +154,7 @@ Bool textcat_copy_result(TextCat * tc, NGrams ** result)
         for (entry = tc->hash.table[i].first; entry ; entry = entry->next) {
             ngrams->ngram[e].str      = mempool_strndup(tc->memory, entry->str, entry->len);
             ngrams->ngram[e].freq     = entry->freq;
+            ngrams->ngram[e].size     = entry->len;
             ngrams->ngram[e].position = 0;
             CHECK_MEM(ngrams->ngram[e].str);
             e++;
@@ -187,6 +193,34 @@ void textcat_sort_result(NGrams * ngrams)
     }
     /* sort by string, for fast comparition */
     qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_str);
+}
+// }}}
+
+// textcat_result_merge(TextCat *, result_stack *, NGrams ** ) {{{
+Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result)
+{
+    NGram * tmp;
+    long i;
+    if (textcat_init_hash(tc) == TC_FALSE) {
+        return TC_FALSE;
+    }
+    while (stack) {
+        for (i=0; i < stack->result->size; i++) {
+            tmp = &stack->result->ngram[i];
+            if (textcat_ngram_incr_ex(tc, tmp->str, tmp->size, tmp->freq) == TC_FALSE) {
+                textcat_destroy_hash(tc);
+                return TC_FALSE;
+            }
+        }
+        stack = stack->next;
+    }
+    if (textcat_copy_result(tc, result) == TC_FALSE) {
+        textcat_destroy_hash(tc);
+        return TC_FALSE;
+    }
+    textcat_sort_result(*result);
+    textcat_destroy_hash(tc);
+    return TC_TRUE;
 }
 // }}}
 

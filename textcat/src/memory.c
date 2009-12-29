@@ -169,7 +169,7 @@ static Bool mempool_add_memblock (mempool * pool, size_t rsize)
     }
     mem->size   = size;
     /* offset is never 0, to avoid free() from out of the memory library */
-    mem->offset = 1; 
+    mem->offset = 0; 
     mem->next   = NULL;
     mem->pool   = (void *) pool->malloc( size );
     if (mem->pool == NULL) {

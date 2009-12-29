@@ -21,11 +21,16 @@
     #define DIR_NAME "./ngrams/"
 #endif
 
-Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams)
+Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)
 {
     uchar * fname;
+    long i;
+
     fname = mempool_malloc(tc->memory, strlen(id) + strlen(DIR_NAME) + 2);
     sprintf(fname, "%s/%s", DIR_NAME, id);
-    printf("filename: %s\n", fname);
+    printf("filename: %s (%d ngrams)\n", fname, result->size);
     mkdir(DIR_NAME, 0777);
+    for(i=0; i < result->size; i++) {
+        //printf("M:%s(%d)\n", result->ngram[i].str, result->ngram[i].freq);
+    }
 }

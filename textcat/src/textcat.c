@@ -177,17 +177,15 @@ int TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
 // TextCat_save(TextCat *, unsigned uchar *) {{{
 Bool TextCat_save(TextCat * tc, const uchar * id)
 {
-    result_stack * stack;
+    NGrams * results;
     if (tc->results == NULL) {
         tc->error = TC_NO_NGRAM;
         return TC_FALSE;
     }
-    stack = tc->results;
-    while (stack) {
-        printf("one\n");
-        stack = stack->next;
+    if (textcat_result_merge(tc, tc->results, &results) == TC_FALSE) {
+        return TC_FALSE;
     }
-    tc->save(tc, id, NULL);
+    tc->save(tc, id, results);
     TextCat_reset(tc);
 }
 // }}}
