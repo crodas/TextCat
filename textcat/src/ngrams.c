@@ -72,11 +72,11 @@ Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len)
 Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** ritem)
 {
     ngram_t * item;
-    item = mempool_malloc(tc->memory, sizeof(ngram_t));
+    item = mempool_malloc(tc->temp, sizeof(ngram_t));
     CHECK_MEM(item)
 
     /* setup the new N-gram */
-    item->str  = mempool_strndup(tc->memory, key, len);
+    item->str  = mempool_strndup(tc->temp, key, len);
     item->freq = 0;
     item->len  = len;
     item->next = NULL;
@@ -105,10 +105,10 @@ Bool textcat_init_hash(TextCat * tc)
     int i;
 
 
-    mempool_init(&tc->memory, tc->malloc, tc->free, tc->allocate_size);
-    CHECK_MEM(tc->memory)
+    mempool_init(&tc->temp, tc->malloc, tc->free, tc->allocate_size);
+    CHECK_MEM(tc->temp)
 
-    table = mempool_calloc(tc->memory, tc->hash_size, sizeof(ngram_set));
+    table = mempool_calloc(tc->temp, tc->hash_size, sizeof(ngram_set));
 
     CHECK_MEM(table)
 
@@ -128,7 +128,7 @@ Bool textcat_init_hash(TextCat * tc)
 // textcat_destroy_hash(TextCat * tc)  {{{
 void textcat_destroy_hash(TextCat * tc) 
 {
-    mempool_done(tc->memory);
+    mempool_done(&tc->temp);
 }
 // }}}
 
@@ -139,15 +139,15 @@ Bool textcat_copy_result(TextCat * tc, NGrams ** result)
     ngram_t * entry;
     int i, e;
 
-    ngrams = (NGrams *) mempool_malloc(tc->result, sizeof(NGrams));
+    ngrams = (NGrams *) mempool_malloc(tc->memory, sizeof(NGrams));
     CHECK_MEM(ngrams);
-    ngrams->ngram = (NGram *) mempool_calloc(tc->result, tc->hash.ngrams, sizeof(NGram));
+    ngrams->ngram = (NGram *) mempool_calloc(tc->memory, tc->hash.ngrams, sizeof(NGram));
     CHECK_MEM(ngrams->ngram);
     ngrams->size = tc->hash.ngrams;
 
     for (i=0, e=0; i < tc->hash.size; i++) {
         for (entry = tc->hash.table[i].first; entry ; entry = entry->next) {
-            ngrams->ngram[e].str      = mempool_strndup(tc->result, entry->str, entry->len);
+            ngrams->ngram[e].str      = mempool_strndup(tc->memory, entry->str, entry->len);
             ngrams->ngram[e].freq     = entry->freq;
             ngrams->ngram[e].position = 0;
             CHECK_MEM(ngrams->ngram[e].str);

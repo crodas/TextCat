@@ -22,15 +22,7 @@
 #define CHECK_MEM_EX(x,Y)   if (x == NULL) { tc->error = TC_ERR_MEM; Y; return TC_FALSE;  }
 
 /* Backward declarations {{{ */
-long textcat_simple_hash(const uchar *p, size_t len, size_t max_number);
-Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
-Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
-int textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len);
-Bool textcat_copy_result(TextCat * tc, NGrams ** result);
-void textcat_sort_result(NGrams * ngrams);
-int textcat_qsort_fnc_freq(const void * a, const void * b);
-int textcat_qsort_fnc_str(const void * a, const void * b);
-static int textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t));
+static Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t));
 /* }}} */
 
 // TextCat_Init(TextCat ** tcc) {{{
@@ -50,25 +42,61 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->max_ngrams    = TC_MAX_NGRAMS;
     tc->error         = TC_OK;
     tc->status        = TC_FREE;
-    tc->result        = NULL;
     *tcc              = tc;
+    tc->memory        = NULL;
+    tc->temp          = NULL;
+    tc->results       = NULL;
     TextCat_reset_handlers(tc);
     return TC_TRUE;
+}
+// }}}
+
+// TextCat_reset(Textcat *) {{{
+void TextCat_reset(TextCat * tc)
+{
+    if (tc->memory != NULL) {
+        mempool_reset(tc->memory);
+    }
+    if (tc->temp != NULL) {
+        mempool_done(&tc->temp);
+    }
+    tc->temp    = NULL;
+    tc->results = NULL;
+}
+// }}}
+
+// TextCat_reset_handler(TextCat * tc) {{{
+void TextCat_reset_handlers(TextCat * tc)
+{
+    tc->parse_str = &textcat_default_text_parser;
+    tc->save      = &knowledge_save;
+}
+// }}}
+
+// TextCat_Destroy(TextCat * tc) {{{
+Bool TextCat_Destroy(TextCat * tc) 
+{
+    if (tc->memory != NULL) {
+        mempool_done(&tc->memory);
+    }
+    free(tc);
 }
 // }}}
 
 // TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams) {{{
 int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams)
 {
+    NGrams * result;
+    result_stack * stack, *stack_temp;
     tc->status = TC_BUSY; /* Set this instance as busy */
     if (textcat_init_hash(tc) == TC_FALSE) {
         tc->status = TC_FREE;
         return TC_FALSE;
     }
 
-    if (tc->result == NULL) {
-        mempool_init(&tc->result, tc->malloc, tc->free, tc->allocate_size);
-        CHECK_MEM_EX(tc->result, textcat_destroy_hash(tc); tc->status=TC_FREE; )
+    if (tc->memory == NULL) {
+        mempool_init(&tc->memory, tc->malloc, tc->free, tc->allocate_size);
+        CHECK_MEM_EX(tc->memory, textcat_destroy_hash(tc); tc->status=TC_FREE; )
     }
     
     if (tc->parse_str(tc, text, length, &textcat_ngram_incr) == TC_FALSE) {
@@ -76,12 +104,32 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
         tc->status = TC_FREE;
         return TC_FALSE;
     }
-    if (textcat_copy_result(tc, ngrams) == TC_FALSE) {
+    if (textcat_copy_result(tc, &result) == TC_FALSE) {
         textcat_destroy_hash(tc);
         tc->status = TC_FREE;
         return TC_FALSE;
     }
-    textcat_sort_result(*ngrams);
+    textcat_sort_result(result);
+
+    /* add the result to our Result Stack {{{ */
+    stack = mempool_malloc(tc->memory, sizeof(result_stack));
+    CHECK_MEM_EX(stack, textcat_destroy_hash(tc); tc->status=TC_FREE; )
+    stack->result = result;
+    stack->next   = NULL;
+    if (tc->results == NULL) {
+        tc->results = stack;
+    } else {
+        stack_temp = tc->results;
+        while (stack_temp->next != NULL) {
+            stack_temp = stack_temp->next;
+        }
+        stack_temp->next = stack;
+    }
+    /* }}} */
+
+    if (ngrams != NULL) {
+        *ngrams = result;
+    }
 
     textcat_destroy_hash(tc);
     tc->error  = TC_OK;
@@ -107,23 +155,45 @@ int TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
         tc->error = TC_NO_FILE;
         return TC_FALSE;
     }
-    buffer = malloc(info.st_size + 1);
+    buffer = tc->malloc(info.st_size + 1);
+    if (buffer == NULL) {
+        tc->error = TC_ERR_MEM;
+        return TC_FALSE;
+    }
     bytes  = read(fd, buffer, info.st_size);
     if (bytes != info.st_size) {
-        free(buffer);
+        tc->free(buffer);
         tc->error = TC_ERR_FILE_SIZE;
         return TC_FALSE;
     }
     close(fd);
     *(buffer+bytes) = '\0';
     fd = TextCat_parse(tc, buffer, bytes, ngrams);
-    free(buffer);
+    tc->free(buffer);
     return fd;
 }
 // }}}
 
+// TextCat_save(TextCat *, unsigned uchar *) {{{
+Bool TextCat_save(TextCat * tc, const uchar * id)
+{
+    result_stack * stack;
+    if (tc->results == NULL) {
+        tc->error = TC_NO_NGRAM;
+        return TC_FALSE;
+    }
+    stack = tc->results;
+    while (stack) {
+        printf("one\n");
+        stack = stack->next;
+    }
+    tc->save(tc, id, NULL);
+    TextCat_reset(tc);
+}
+// }}}
+
 // Default Parsing text callback {{{
-static int textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
+static Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
 {
     int i,e;
     uchar *ntext;
@@ -131,7 +201,7 @@ static int textcat_default_text_parser(TextCat *tc, const uchar * text, size_t l
      * to clean it, setting everything to lower-case, removing
      * non-alpha and whitespaces.
      */
-    ntext = mempool_strndup(tc->memory, text, length);
+    ntext = mempool_strndup(tc->temp, text, length);
     for (i=0, e=0; i < length; i++) {
         if (isalpha(ntext[i])) {
             ntext[e++] = tolower(ntext[i]);
@@ -155,23 +225,6 @@ static int textcat_default_text_parser(TextCat *tc, const uchar * text, size_t l
         }
     }
     return TC_TRUE;
-}
-// }}}
-
-// TextCat_reset_handler(TextCat * tc) {{{
-void TextCat_reset_handlers(TextCat * tc)
-{
-    tc->parse_str = &textcat_default_text_parser;
-}
-// }}}
-
-// TextCat_Destroy(TextCat * tc) {{{
-Bool TextCat_Destroy(TextCat * tc) 
-{
-    if (tc->result != NULL) {
-        mempool_done(tc->result);
-    }
-    free(tc);
 }
 // }}}
 

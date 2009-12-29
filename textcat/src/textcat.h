@@ -27,7 +27,7 @@
 #define TC_HASH_SIZE    100
 #define TC_BUFFER_SIZE  (16 * 1024) 
 #define TC_MAX_NGRAMS   400
-#define Bool            int
+#define Bool            char
 #define uchar           unsigned char
 #define TC_TRUE         1
 #define TC_FALSE        0
@@ -41,6 +41,7 @@
 #define TC_ERR_MEM          -2
 #define TC_NO_FILE          -3
 #define TC_ERR_FILE_SIZE    -4
+#define TC_NO_NGRAM         -5
 // }}}
 
 // Data types {{{
@@ -64,15 +65,21 @@ typedef struct {
     long ngrams;
 } ngram_hash;
 
+typedef struct result_stack {
+    struct NGrams * result;
+    struct result_stack * next;
+} result_stack;
+
 typedef struct TextCat {
     /* pools of memory */
-    void * memory;
-    void * result;
+    void * temp;   /* temporary memory */
+    void * memory; /* "return" structures and internal stack */
 
     /* callback */
     void * (*malloc)(size_t);
     void * (*free)(void *);
-    int * (*parse_str)(struct TextCat *, uchar *, size_t , int * (*set_ngram)(struct TextCat *, const uchar *, size_t));
+    Bool * (*parse_str)(struct TextCat *, uchar *, size_t , int * (*set_ngram)(struct TextCat *, const uchar *, size_t));
+    Bool * (*save)(struct TextCat *, const uchar *, struct NGrams *);
     /* config issues */
     size_t allocate_size;
     int hash_size;
@@ -81,6 +88,7 @@ typedef struct TextCat {
     int max_ngrams;
     /* internal stuff */
     ngram_hash hash;
+    result_stack  * results;
     /* status */
     int error;
     int status;
@@ -94,7 +102,7 @@ typedef struct {
     long position;
 } NGram;
 
-typedef struct {
+typedef struct NGrams {
     NGram * ngram;
     long size;
 } NGrams;
@@ -106,12 +114,25 @@ Bool TextCat_Destroy(TextCat * tc);
 int TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
 void TextCat_reset_handlers(TextCat * tc);
 
-extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
-extern void mempool_done(void * memory);
+Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
+void mempool_done(void ** memory);
 void * mempool_calloc(void * memory, size_t nmemb, size_t size);
 void * mempool_malloc(void * memory, size_t size);
 uchar * mempool_strndup(void * memory, uchar * key, size_t len);
 void mempool_reset(void * memory);
+
+/* Backward declarations {{{ */
+long textcat_simple_hash(const uchar *p, size_t len, size_t max_number);
+Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
+Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
+Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len);
+Bool textcat_copy_result(TextCat * tc, NGrams ** result);
+void textcat_sort_result(NGrams * ngrams);
+int textcat_qsort_fnc_freq(const void * a, const void * b);
+int textcat_qsort_fnc_str(const void * a, const void * b);
+Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
+/* }}} */
+
 
 /*
  * Local variables:

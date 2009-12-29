@@ -62,10 +62,10 @@ extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfr
 // }}}
 
 // mempool_done(void * memory) {{{
-extern void mempool_done(void * memory)
+void mempool_done(void ** memory)
 {
     mempool * mem;
-    mem = memory;
+    mem = *memory;
     void * (*xfree)(size_t);
     xfree = mem->free;
     if (mem->blocks > 0) {
@@ -80,7 +80,8 @@ extern void mempool_done(void * memory)
             mem1 = mem2;
         }
     }
-    xfree(memory);
+    xfree(*memory);
+    *memory = 0;
 }
 // }}}
 
@@ -90,11 +91,9 @@ void mempool_reset(void * memory)
     mempool * pool;
     memblock * block, * next;
     pool  = (mempool *) memory;
-    block = pool->first;
-    if (block == NULL) {
+    if (pool->first == NULL) {
         return;
     }
-    block->offset = 0;
     for (block = pool->first->next; block; block = next) {
         pool->blocks--;
         pool->size -= block->size;
@@ -104,6 +103,9 @@ void mempool_reset(void * memory)
         next = block->next;
         pool->free(block);
     }
+    block = pool->first;
+    block->offset = 1;
+    block->next   = NULL; 
     pool->last  = pool->first;
     pool->offset = 0;
 
@@ -123,7 +125,7 @@ void * mempool_malloc(void * memory, size_t size)
     } 
     mmem = pool->last->pool +  pool->last->offset;
     pool->last->offset += size;
-    pool->offset += size;
+    pool->offset       += size;
 
     return mmem;
 }
