@@ -166,15 +166,23 @@ Bool textcat_copy_result(TextCat * tc, NGrams ** result)
 // }}}
 
 // Sorting {{{
-int textcat_qsort_fnc_freq(const void * a, const void * b)
+static int textcat_qsort_fnc_freq(const void * a, const void * b)
 {
+    int diff;
     NGram *aa, *bb;
     aa = (NGram *) a;
     bb = (NGram *) b;
-    return bb->freq - aa->freq;
+    diff = bb->freq - aa->freq;
+    /* if they have the same frequency, let's order 
+     * by string, in a descendent fashion
+     */
+    if (diff == 0) {
+        diff = strcmp(aa->str, bb->str);
+    }
+    return diff;
 }
 
-int textcat_qsort_fnc_str(const void * a, const void * b)
+static int textcat_qsort_fnc_str(const void * a, const void * b)
 {
     NGram *aa, *bb;
     aa = (NGram *) a;
@@ -182,17 +190,27 @@ int textcat_qsort_fnc_str(const void * a, const void * b)
     return strcmp(aa->str, bb->str);
 }
 
+void textcat_ngram_sort_by_freq(NGrams * ngrams)
+{
+    qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_freq);
+}
+
+void textcat_ngram_sort_by_str(NGrams * ngrams)
+{
+    qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_str);
+}
+
 void textcat_sort_result(NGrams * ngrams)
 {
     int i;
     /* sorting by freq */
-    qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_freq);
+    textcat_ngram_sort_by_freq(ngrams);
     /* set their ranking */
     for (i=0; i < ngrams->size; i++) {
         ngrams->ngram[i].position = i;
     }
     /* sort by string, for fast comparition */
-    qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_str);
+    textcat_ngram_sort_by_str(ngrams);
 }
 // }}}
 

@@ -128,10 +128,10 @@ Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, siz
 Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len);
 Bool textcat_copy_result(TextCat * tc, NGrams ** result);
 void textcat_sort_result(NGrams * ngrams);
-int textcat_qsort_fnc_freq(const void * a, const void * b);
-int textcat_qsort_fnc_str(const void * a, const void * b);
 Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
 Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
+void textcat_ngram_sort_by_str(NGrams * ngrams);
+void textcat_ngram_sort_by_freq(NGrams * ngrams);
 /* }}} */
 
 

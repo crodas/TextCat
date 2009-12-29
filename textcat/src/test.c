@@ -9,7 +9,7 @@ int main()
     TextCat_Init(&tc);
         if (TextCat_parse_file(tc, "./test.txt", &t1) == TC_TRUE) {
             for (i=0; i < t1->size; i++) {
-            //    printf("Token=(%s), Freq=%d, Post=%d\n", t1->ngram[i].str, t1->ngram[i].freq, t1->ngram[i].position);
+                //printf("Token=(%s), Freq=%d, Post=%d\n", t1->ngram[i].str, t1->ngram[i].freq, t1->ngram[i].position);
             }
         }
         TextCat_parse(tc, text[0], strlen(text[0]),&t2);
