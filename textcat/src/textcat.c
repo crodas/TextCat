@@ -109,7 +109,6 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
         tc->status = TC_FREE;
         return TC_FALSE;
     }
-    textcat_sort_result(result);
 
     /* add the result to our Result Stack {{{ */
     stack = mempool_malloc(tc->memory, sizeof(result_stack));

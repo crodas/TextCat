@@ -12,9 +12,10 @@ int main()
                 //printf("Token=(%s), Freq=%d, Post=%d\n", t1->ngram[i].str, t1->ngram[i].freq, t1->ngram[i].position);
             }
         }
+        printf("%d\n", t1->size);
         TextCat_parse(tc, text[0], strlen(text[0]),&t2);
-        TextCat_save(tc, "english.txt");
-        TextCat_reset(tc);
+        //TextCat_save(tc, "english.txt");
+        //TextCat_reset(tc);
         //TextCat_parse(tc, text[1], strlen(text[1]), &t2);
     TextCat_Destroy(tc);
 }

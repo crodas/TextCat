@@ -24,7 +24,7 @@
 
 
 // Definitions {{{
-#define TC_HASH_SIZE    100
+#define TC_HASH_SIZE    1000
 #define TC_BUFFER_SIZE  (16 * 1024) 
 #define TC_MAX_NGRAMS   400
 #define Bool            char
@@ -127,11 +127,11 @@ Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, n
 Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
 Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len);
 Bool textcat_copy_result(TextCat * tc, NGrams ** result);
-void textcat_sort_result(NGrams * ngrams);
-Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
-Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
 void textcat_ngram_sort_by_str(NGrams * ngrams);
 void textcat_ngram_sort_by_freq(NGrams * ngrams);
+/* */
+Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
+Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
 /* }}} */
 
 

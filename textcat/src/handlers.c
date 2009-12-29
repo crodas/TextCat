@@ -18,7 +18,7 @@
 #include "textcat.h"
 
 #ifndef DIR_NAME
-    #define DIR_NAME "./ngrams/"
+    #define DIR_NAME "./saved_ngrams/"
 #endif
 
 Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)

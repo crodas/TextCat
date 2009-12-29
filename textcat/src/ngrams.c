@@ -140,34 +140,61 @@ void textcat_destroy_hash(TextCat * tc)
 //textcat_copy_result(TextCat * tc, NGrams ** result) {{{
 Bool textcat_copy_result(TextCat * tc, NGrams ** result)
 {
-    NGrams * ngrams;
+    NGrams * temp, * ngrams;
     ngram_t * entry;
-    int i, e;
+    long i, e;
+    long length;
 
-    ngrams = (NGrams *) mempool_malloc(tc->memory, sizeof(NGrams));
-    CHECK_MEM(ngrams);
-    ngrams->ngram = (NGram *) mempool_calloc(tc->memory, tc->hash.ngrams, sizeof(NGram));
-    CHECK_MEM(ngrams->ngram);
-    ngrams->size = tc->hash.ngrams;
+    temp = (NGrams *) mempool_malloc(tc->temp, sizeof(NGrams));
+    CHECK_MEM(temp);
+    temp->ngram = (NGram *) mempool_calloc(tc->temp, tc->hash.ngrams, sizeof(NGram));
+    CHECK_MEM(temp->ngram);
+    temp->size = tc->hash.ngrams;
 
     for (i=0, e=0; i < tc->hash.size; i++) {
         for (entry = tc->hash.table[i].first; entry ; entry = entry->next) {
-            ngrams->ngram[e].str      = mempool_strndup(tc->memory, entry->str, entry->len);
-            ngrams->ngram[e].freq     = entry->freq;
-            ngrams->ngram[e].size     = entry->len;
-            ngrams->ngram[e].position = 0;
-            CHECK_MEM(ngrams->ngram[e].str);
+            temp->ngram[e].str      = entry->str;
+            temp->ngram[e].freq     = entry->freq;
+            temp->ngram[e].size     = entry->len;
+            temp->ngram[e].position = 0;
             e++;
         }
     }
+
+    /* sort by frequency */
+    textcat_ngram_sort_by_freq(temp);
+
+    /* guess the number of desires N-grams */
+    length = temp->size > tc->max_ngrams ?  tc->max_ngrams : temp->size;
+
+    /* preparing the result */
+    ngrams = (NGrams *) mempool_malloc(tc->memory, sizeof(NGrams));
+    CHECK_MEM(ngrams);
+    ngrams->ngram = (NGram *) mempool_calloc(tc->memory, length, sizeof(NGram));
+    CHECK_MEM(ngrams->ngram);
+    ngrams->size = length;
+
+    /* copying the first 'length' ngrams */
+    for (i=0; i < length; i++) {
+        ngrams->ngram[i].str      = mempool_strndup(tc->memory,temp->ngram[i].str, temp->ngram[i].size);
+        ngrams->ngram[i].freq     = temp->ngram[i].freq;
+        ngrams->ngram[i].size     = temp->ngram[i].size;
+        ngrams->ngram[i].position = temp->ngram[i].position;
+        CHECK_MEM(ngrams->ngram[i].str);
+    }
+
+    /* sort by string (for fast comparition) */
+    textcat_ngram_sort_by_str(ngrams);
+
     *result = ngrams;
+
     return TC_TRUE;
 }
 // }}}
 
 // Sorting {{{
 static int textcat_qsort_fnc_freq(const void * a, const void * b)
-{
+{   
     int diff;
     NGram *aa, *bb;
     aa = (NGram *) a;
@@ -200,9 +227,11 @@ void textcat_ngram_sort_by_str(NGrams * ngrams)
     qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_str);
 }
 
-void textcat_sort_result(NGrams * ngrams)
+static void textcat_sort_result(NGrams ** result)
 {
     int i;
+    NGrams * ngrams;
+    ngrams = *result;
     /* sorting by freq */
     textcat_ngram_sort_by_freq(ngrams);
     /* set their ranking */
@@ -236,7 +265,6 @@ Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result)
         textcat_destroy_hash(tc);
         return TC_FALSE;
     }
-    textcat_sort_result(*result);
     textcat_destroy_hash(tc);
     return TC_TRUE;
 }
