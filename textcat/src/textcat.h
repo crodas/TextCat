@@ -80,6 +80,7 @@ typedef struct TextCat {
     void * (*free)(void *);
     Bool * (*parse_str)(struct TextCat *, uchar *, size_t , int * (*set_ngram)(struct TextCat *, const uchar *, size_t));
     Bool * (*save)(struct TextCat *, const uchar *, struct NGrams *);
+    Bool * (*list)(struct TextCat *, uchar ***, int *);
     /* config issues */
     size_t allocate_size;
     int hash_size;

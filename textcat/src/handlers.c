@@ -16,9 +16,12 @@
    +----------------------------------------------------------------------+
  */
 #include "textcat.h"
+#include "textcat_internal.h"
+#include <dirent.h>
+
 
 #ifndef DIR_NAME
-    #define DIR_NAME "./saved_ngrams/"
+    #define DIR_NAME "./knowledge/"
 #endif
 
 Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)
@@ -50,4 +53,34 @@ Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)
     *(content+offset) = '\0';
     i = write(fd, content, offset);
     close(fd);
+}
+
+Bool knowledge_list(TextCat * tc, uchar *** list, int * size) 
+{
+    DIR * fd;
+    struct dirent * info;
+    int len, i;
+
+    fd = opendir(DIR_NAME);
+    if (fd == NULL) {
+        tc->error = TC_NO_FILE;
+        return TC_FALSE;
+    }
+    len = -2; /* . and .. aren't files */
+    i   = 0;
+    while (readdir(fd))  len++;
+    rewinddir(fd);
+    *list = mempool_malloc(tc->memory, len * sizeof(char *));
+    CHECK_MEM(*list);
+    while (info = readdir(fd)) {
+        if (strcmp(info->d_name, ".") == 0 || strcmp(info->d_name, "..") == 0) {
+            continue;
+        }
+        *(*list+i) = mempool_strdup(tc->memory, info->d_name);
+        CHECK_MEM(*(*list+i));
+        i++;
+    }
+    *size = len;
+    closedir(fd);
+    return TC_TRUE;
 }

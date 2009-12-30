@@ -38,7 +38,10 @@ void textcat_ngram_sort_by_freq(NGrams * ngrams);
 /* */
 Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
 Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
+Bool knowledge_list(TextCat * tc, uchar *** list, int * size);
 /* }}} */
+
+#define mempool_strdup(x,y) mempool_strndup(x, y, strlen(y))
 
 /*
  * Local variables:

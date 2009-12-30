@@ -16,5 +16,15 @@ int main()
         TextCat_save(tc, "english.txt");
         TextCat_reset(tc);
         TextCat_parse(tc, text[1], strlen(text[1]), &t2);
+
+
+        /* list files */
+        uchar ** files;
+        int len;
+        tc->list(tc, &files, &len);
+        for (i=0; i < len; i++) {
+            printf("lanaguage: %s\n", files[i]);
+        }
+
     TextCat_Destroy(tc);
 }

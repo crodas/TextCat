@@ -67,6 +67,7 @@ void TextCat_reset_handlers(TextCat * tc)
 {
     tc->parse_str = &textcat_default_text_parser;
     tc->save      = &knowledge_save;
+    tc->list      = &knowledge_list;
 }
 // }}}
 
