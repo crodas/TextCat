@@ -17,6 +17,7 @@
  */
 
 #include "textcat.h"
+#include "textcat_internal.h"
 
 typedef struct memblock {
     void * pool;

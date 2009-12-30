@@ -50,30 +50,37 @@ Bool TextCat_Init(TextCat ** tcc)
 // }}}
 
 // TextCat_reset(Textcat *) {{{
-void TextCat_reset(TextCat * tc)
+Bool TextCat_reset(TextCat * tc)
 {
+    LOCK_INSTANCE(tc);
     if (tc->memory != NULL) {
         mempool_reset(tc->memory);
     }
     if (tc->temp != NULL) {
         mempool_reset(tc->temp);
     }
+    UNLOCK_INSTANCE(tc);
     tc->results = NULL;
+    return TC_TRUE;
 }
 // }}}
 
 // TextCat_reset_handler(TextCat * tc) {{{
-void TextCat_reset_handlers(TextCat * tc)
+Bool TextCat_reset_handlers(TextCat * tc)
 {
+    LOCK_INSTANCE(tc);
     tc->parse_str = &textcat_default_text_parser;
     tc->save      = &knowledge_save;
     tc->list      = &knowledge_list;
+    UNLOCK_INSTANCE(tc);
+    return TC_TRUE;
 }
 // }}}
 
 // TextCat_Destroy(TextCat * tc) {{{
 Bool TextCat_Destroy(TextCat * tc) 
 {
+    LOCK_INSTANCE(tc);
     if (tc->memory != NULL) {
         mempool_done(&tc->memory);
     }
@@ -89,25 +96,17 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
 {
     NGrams * result;
     result_stack * stack, *stack_temp;
-    tc->status = TC_BUSY; /* Set this instance as busy */
-    if (textcat_init_hash(tc) == TC_FALSE) {
-        tc->status = TC_FREE;
-        return TC_FALSE;
-    }
 
-    if (tc->memory == NULL) {
-        mempool_init(&tc->memory, tc->malloc, tc->free, tc->allocate_size);
-        CHECK_MEM_EX(tc->memory, textcat_destroy_hash(tc); tc->status=TC_FREE; )
-    }
+    LOCK_INSTANCE(tc);
     
     if (tc->parse_str(tc, text, length, &textcat_ngram_incr) == TC_FALSE) {
         textcat_destroy_hash(tc);
-        tc->status = TC_FREE;
+        UNLOCK_INSTANCE(tc);
         return TC_FALSE;
     }
     if (textcat_copy_result(tc, &result) == TC_FALSE) {
         textcat_destroy_hash(tc);
-        tc->status = TC_FREE;
+        UNLOCK_INSTANCE(tc);
         return TC_FALSE;
     }
 
@@ -133,7 +132,7 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
 
     textcat_destroy_hash(tc);
     tc->error  = TC_OK;
-    tc->status = TC_FREE;
+    UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
 // }}}
@@ -178,6 +177,9 @@ int TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
 Bool TextCat_save(TextCat * tc, const uchar * id)
 {
     NGrams * results;
+
+    LOCK_INSTANCE(tc);
+
     if (tc->results == NULL) {
         tc->error = TC_NO_NGRAM;
         return TC_FALSE;
@@ -189,13 +191,18 @@ Bool TextCat_save(TextCat * tc, const uchar * id)
         return TC_FALSE;
     }
     TextCat_reset(tc);
+    UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
 // }}}
 
 Bool TextCat_list(TextCat * tc, uchar *** list, int * len)
 {
-    return tc->list(tc, list, len);
+    Bool ret;
+    LOCK_INSTANCE(tc);
+    ret = tc->list(tc, list, len);
+    UNLOCK_INSTANCE(tc);
+    return ret;
 }
 
 // Default Parsing text callback {{{

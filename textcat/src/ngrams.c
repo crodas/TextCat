@@ -108,11 +108,7 @@ Bool textcat_init_hash(TextCat * tc)
     ngram_set * table;
     int i;
 
-
-    if (tc->temp == NULL) {
-        mempool_init(&tc->temp, tc->malloc, tc->free, tc->allocate_size);
-        CHECK_MEM(tc->temp)
-    }
+    INIT_MEMORY(temp);
 
     table = mempool_calloc(tc->temp, tc->hash_size, sizeof(ngram_set));
 

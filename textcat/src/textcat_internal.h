@@ -16,8 +16,28 @@
    +----------------------------------------------------------------------+
  */
 
-#define CHECK_MEM(x)   if (x == NULL) { tc->error = TC_ERR_MEM; return TC_FALSE;  }
+#include <string.h>
+#ifdef HAVE_CONFIG
+#   include "config.h"
+#endif
+
+
+#define CHECK_MEM(x)        if (x == NULL) { tc->error = TC_ERR_MEM; return TC_FALSE;  }
 #define CHECK_MEM_EX(x,Y)   if (x == NULL) { tc->error = TC_ERR_MEM; Y; return TC_FALSE;  }
+
+#define INIT_MEMORY(x)      if (tc->x == NULL) { \
+                                mempool_init(&tc->x, tc->malloc, tc->free, tc->allocate_size); \
+                                CHECK_MEM_EX(tc->x, textcat_destroy_hash(tc); tc->status=TC_FREE;)  \
+                            }
+
+#define LOCK_INSTANCE(tc)   if (tc->status != TC_FREE) {\
+                                tc->error = TC_BUSY; \
+                                return TC_FALSE; \
+                            } \
+                            tc->status = TC_BUSY; /* lock it for our thread */ \
+                            INIT_MEMORY(memory);  /* initialize tc->memory if it wasn't before */
+
+#define UNLOCK_INSTANCE(tc)   tc->status = TC_FREE;
 
 /* Backward declarations {{{ */
 Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
@@ -35,6 +55,8 @@ Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len);
 Bool textcat_copy_result(TextCat * tc, NGrams ** result);
 void textcat_ngram_sort_by_str(NGrams * ngrams);
 void textcat_ngram_sort_by_freq(NGrams * ngrams);
+Bool textcat_init_hash(TextCat * tc);
+void textcat_destroy_hash(TextCat * tc);
 /* */
 Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
 Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);

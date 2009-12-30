@@ -22,7 +22,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-
 // Definitions {{{
 #define TC_HASH_SIZE    1000
 #define TC_BUFFER_SIZE  (16 * 1024) 
@@ -113,7 +112,7 @@ typedef struct NGrams {
 Bool TextCat_Init(TextCat ** tc);
 Bool TextCat_Destroy(TextCat * tc);
 int TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
-void TextCat_reset_handlers(TextCat * tc);
+Bool TextCat_reset_handlers(TextCat * tc);
 
 /*
  * Local variables:
