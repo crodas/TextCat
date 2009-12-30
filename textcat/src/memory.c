@@ -104,7 +104,7 @@ void mempool_reset(void * memory)
         pool->free(block);
     }
     block = pool->first;
-    block->offset = 1;
+    block->offset = 0;
     block->next   = NULL; 
     pool->last  = pool->first;
     pool->offset = 0;
@@ -168,7 +168,6 @@ static Bool mempool_add_memblock (mempool * pool, size_t rsize)
         return TC_FALSE;
     }
     mem->size   = size;
-    /* offset is never 0, to avoid free() from out of the memory library */
     mem->offset = 0; 
     mem->next   = NULL;
     mem->pool   = (void *) pool->malloc( size );

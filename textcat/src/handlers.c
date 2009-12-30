@@ -29,7 +29,6 @@ Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)
 
     fname = mempool_malloc(tc->memory, strlen(id) + strlen(DIR_NAME) + 2);
     sprintf(fname, "%s/%s", DIR_NAME, id);
-    printf("filename: %s (%d ngrams)\n", fname, result->size);
     mkdir(DIR_NAME, 0777);
     fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY);
     if (fd == -1) {
@@ -43,7 +42,7 @@ Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)
     /* sort by freq */
     textcat_ngram_sort_by_freq(result);
 
-    for(i=0; i < tc->max_ngrams; i++) {
+    for(i=0; i < result->size; i++) {
         strncpy(content+offset, result->ngram[i].str, result->ngram[i].size);
         offset += result->ngram[i].size+1;
         *(content+ offset-1) = '\n';

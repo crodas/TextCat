@@ -114,27 +114,6 @@ Bool TextCat_Destroy(TextCat * tc);
 int TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
 void TextCat_reset_handlers(TextCat * tc);
 
-Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
-void mempool_done(void ** memory);
-void * mempool_calloc(void * memory, size_t nmemb, size_t size);
-void * mempool_malloc(void * memory, size_t size);
-uchar * mempool_strndup(void * memory, uchar * key, size_t len);
-void mempool_reset(void * memory);
-
-/* Backward declarations {{{ */
-long textcat_simple_hash(const uchar *p, size_t len, size_t max_number);
-Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
-Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** item);
-Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len);
-Bool textcat_copy_result(TextCat * tc, NGrams ** result);
-void textcat_ngram_sort_by_str(NGrams * ngrams);
-void textcat_ngram_sort_by_freq(NGrams * ngrams);
-/* */
-Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
-Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
-/* }}} */
-
-
 /*
  * Local variables:
  * tab-width: 4

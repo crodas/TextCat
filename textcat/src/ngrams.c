@@ -17,15 +17,14 @@
  */
 
 #include "textcat.h"
-
-#define CHECK_MEM(x)   if (x == NULL) { tc->error = TC_ERR_MEM; return TC_FALSE;  }
-#define CHECK_MEM_EX(x,Y)   if (x == NULL) { tc->error = TC_ERR_MEM; Y; return TC_FALSE;  }
+#include "textcat_internal.h"
 
 // simple_hash(const uchar *, int) {{{
 long textcat_simple_hash(const uchar *str, size_t len, size_t max_number)
 {
 	long hash = len * 13;
-	while (*str && len-- > 0) {
+    /* extract the ngrams, and pass-it to the library (with the callback) */
+	while (--len > 0) {
 		hash = (hash<<5)-hash + *str++;
 	}
 	return (long)hash & max_number;
@@ -110,8 +109,10 @@ Bool textcat_init_hash(TextCat * tc)
     int i;
 
 
-    mempool_init(&tc->temp, tc->malloc, tc->free, tc->allocate_size);
-    CHECK_MEM(tc->temp)
+    if (tc->temp == NULL) {
+        mempool_init(&tc->temp, tc->malloc, tc->free, tc->allocate_size);
+        CHECK_MEM(tc->temp)
+    }
 
     table = mempool_calloc(tc->temp, tc->hash_size, sizeof(ngram_set));
 
@@ -133,7 +134,7 @@ Bool textcat_init_hash(TextCat * tc)
 // textcat_destroy_hash(TextCat * tc)  {{{
 void textcat_destroy_hash(TextCat * tc) 
 {
-    mempool_done(&tc->temp);
+    mempool_reset(tc->temp);
 }
 // }}}
 
@@ -179,7 +180,7 @@ Bool textcat_copy_result(TextCat * tc, NGrams ** result)
         ngrams->ngram[i].str      = mempool_strndup(tc->memory,temp->ngram[i].str, temp->ngram[i].size);
         ngrams->ngram[i].freq     = temp->ngram[i].freq;
         ngrams->ngram[i].size     = temp->ngram[i].size;
-        ngrams->ngram[i].position = temp->ngram[i].position;
+        ngrams->ngram[i].position = i;
         CHECK_MEM(ngrams->ngram[i].str);
     }
 
@@ -227,20 +228,6 @@ void textcat_ngram_sort_by_str(NGrams * ngrams)
     qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_str);
 }
 
-static void textcat_sort_result(NGrams ** result)
-{
-    int i;
-    NGrams * ngrams;
-    ngrams = *result;
-    /* sorting by freq */
-    textcat_ngram_sort_by_freq(ngrams);
-    /* set their ranking */
-    for (i=0; i < ngrams->size; i++) {
-        ngrams->ngram[i].position = i;
-    }
-    /* sort by string, for fast comparition */
-    textcat_ngram_sort_by_str(ngrams);
-}
 // }}}
 
 // textcat_result_merge(TextCat *, result_stack *, NGrams ** ) {{{
