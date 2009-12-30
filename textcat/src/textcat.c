@@ -98,6 +98,10 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
     result_stack * stack, *stack_temp;
 
     LOCK_INSTANCE(tc);
+
+    if (textcat_init_hash(tc) == TC_FALSE) {
+        return TC_FALSE;
+    }
     
     if (tc->parse_str(tc, text, length, &textcat_ngram_incr) == TC_FALSE) {
         textcat_destroy_hash(tc);

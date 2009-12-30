@@ -112,6 +112,7 @@ typedef struct NGrams {
 Bool TextCat_Init(TextCat ** tc);
 Bool TextCat_Destroy(TextCat * tc);
 int TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
+Bool TextCat_reset(TextCat * tc);
 Bool TextCat_reset_handlers(TextCat * tc);
 
 /*

@@ -25,6 +25,7 @@
 #define CHECK_MEM(x)        if (x == NULL) { tc->error = TC_ERR_MEM; return TC_FALSE;  }
 #define CHECK_MEM_EX(x,Y)   if (x == NULL) { tc->error = TC_ERR_MEM; Y; return TC_FALSE;  }
 
+                                
 #define INIT_MEMORY(x)      if (tc->x == NULL) { \
                                 mempool_init(&tc->x, tc->malloc, tc->free, tc->allocate_size); \
                                 CHECK_MEM_EX(tc->x, textcat_destroy_hash(tc); tc->status=TC_FREE;)  \

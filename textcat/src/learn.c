@@ -34,12 +34,13 @@ int main(int argc, char * argv[])
             printf("Error while saving n-grams %s\n", basename(argv[i]));
         }
     }
-    /* list files */
+
+    /* list all the knowledges */
     uchar ** files;
     int len;
     TextCat_list(tc, &files, &len);
     for (i=0; i < len; i++) {
-        printf("language: %s\n", files[i]);
+        printf("Knowledge: %s\n", files[i]);
     }
 
     TextCat_Destroy(tc);
