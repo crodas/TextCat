@@ -185,10 +185,18 @@ Bool TextCat_save(TextCat * tc, const uchar * id)
     if (textcat_result_merge(tc, tc->results, &results) == TC_FALSE) {
         return TC_FALSE;
     }
-    tc->save(tc, id, results);
+    if (tc->save(tc, id, results) == TC_FALSE) {
+        return TC_FALSE;
+    }
     TextCat_reset(tc);
+    return TC_TRUE;
 }
 // }}}
+
+Bool TextCat_list(TextCat * tc, uchar *** list, int * len)
+{
+    return tc->list(tc, list, len);
+}
 
 // Default Parsing text callback {{{
 static Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
