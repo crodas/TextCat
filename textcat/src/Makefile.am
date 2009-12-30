@@ -1,7 +1,9 @@
-noinst_LIBRARIES = libtextcat.a
-libtextcat_a_SOURCES = textcat.c ngrams.c memory.c handlers.c
+lib_LTLIBRARIES = libtextcat.la
+include_HEADERS = textcat.h
+libtextcat_la_SOURCES = textcat.c ngrams.c memory.c handlers.c
 
-bin_PROGRAMS = test
 
-test_SOURCES = test.c
-test_LDADD = libtextcat.a
+bin_PROGRAMS = tc_learn
+
+tc_learn_SOURCES = learn.c
+tc_learn_LDADD   = libtextcat.la

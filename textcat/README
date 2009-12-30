@@ -1,0 +1,7 @@
+$ aclocal
+$ autoheader
+$ libtoolize --force
+$ autoconf 
+$ automake --add-missing
+$ ./configure
+$ make
