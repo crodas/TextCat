@@ -33,7 +33,7 @@ Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)
     fname = mempool_malloc(tc->memory, strlen(id) + strlen(DIR_NAME) + 2);
     sprintf(fname, "%s/%s", DIR_NAME, id);
     mkdir(DIR_NAME, 0777);
-    fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0444);
+    fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if (fd == -1) {
         tc->error = TC_NO_FILE;
         return TC_FALSE;

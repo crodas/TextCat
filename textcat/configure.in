@@ -1,0 +1,11 @@
+AC_INIT(textcat,0.1)
+
+AM_INIT_AUTOMAKE
+AC_PROG_RANLIB
+AC_CONFIG_HEADERS(config.h)
+AC_PROG_CC
+
+AC_OUTPUT([
+    Makefile
+    src/Makefile
+])
