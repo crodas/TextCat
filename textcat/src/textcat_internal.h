@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <limits.h>
 #ifdef HAVE_CONFIG
 #   include "config.h"
 #endif

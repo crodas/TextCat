@@ -302,11 +302,17 @@ Bool TextCat_load(TextCat *tc)
 }
 // }}}
 
+
+static int ranking_sort(void * a, void *b)
+{
+    return ((long) a) - ((long)b);
+}
+
 Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar ** result)
 {
     NGrams * ptext;
     int i;
-    long diff;
+    long * diff, threshold;
     if (TextCat_load(tc) == TC_FALSE) {
         return TC_FALSE;
     }
@@ -314,8 +320,10 @@ Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *
         return TC_FALSE;
     }
     LOCK_INSTANCE(tc);
+    diff = mempool_calloc(tc->memory, tc->klTotal, sizeof(long));
     for (i=0; i  < tc->klTotal; i++) {
-       diff = tc->diff(ptext, &tc->klContent[i]);
+       *(diff+i) = tc->diff(ptext, &tc->klContent[i]);
+       printf("%s diff: %d %d\n", tc->klNames[i], *(diff+i), LONG_MAX);
     }
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;

@@ -148,20 +148,21 @@ long knowledge_diff(NGrams *a, NGrams *b)
 {
     int ai, bi, diff;
     long dist;
+    int max;
     dist = 0;
+    max  = a->size > b->size ? a->size : b->size;
     for (ai=0,bi=0; ai < a->size && bi < b->size; ) {
          diff = strcmp(a->ngram[ai].str, b->ngram[bi].str);
          if (diff > 0) {
-             dist += 400;
-             bi++;
-         } else if (diff < 0) {
-             dist += 400;
              ai++;
+         } else if (diff < 0) {
+             dist += max;
+             bi++;
          } else {
              dist += a->ngram[ai].position - b->ngram[bi].position;
              bi++;
              ai++;
          }
     }
-    return dist;
+    return dist/max;
 }
