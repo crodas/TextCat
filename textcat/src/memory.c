@@ -20,9 +20,10 @@
 #include "textcat_internal.h"
 
 typedef struct memblock {
-    void * pool;
+    void * memory;
     size_t size;
     size_t offset;
+    short int free;
     struct memblock * next;
 } memblock;
 
@@ -30,7 +31,7 @@ typedef struct mempool {
     memblock * first;
     memblock * last;
     size_t size;
-    size_t offset;
+    size_t usage;
     size_t blocks;
     /* callback */
     void * (*malloc)(size_t);
@@ -52,7 +53,7 @@ extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfr
     mem->first      = NULL;
     mem->last       = NULL;
     mem->blocks     = 0;
-    mem->offset     = 0;
+    mem->usage      = 0;
     mem->size       = 0;
     mem->free       = xfree;
     mem->malloc     = xmalloc;
@@ -69,13 +70,13 @@ void mempool_done(void ** memory)
     mem = *memory;
     void * (*xfree)(size_t);
     xfree = mem->free;
-    if (mem->blocks > 0) {
+    if (mem->size > 0) {
         memblock * mem1, * mem2;
         mem1 = mem->first;
         while (mem1) {
             mem2 = mem1->next;
             if (mem1->size > 0) {
-                xfree(mem1->pool);
+                xfree(mem1->memory);
             }
             xfree(mem1);
             mem1 = mem2;
@@ -95,20 +96,11 @@ void mempool_reset(void * memory)
     if (pool->first == NULL) {
         return;
     }
-    for (block = pool->first->next; block; block = next) {
-        pool->blocks--;
-        pool->size -= block->size;
-        if (block->size > 0) {
-            pool->free(block->pool);
-        }
-        next = block->next;
-        pool->free(block);
+    for (block = pool->first; block; block = block->next) {
+        block->offset = 0;
+        block->free   = 1;
     }
-    block = pool->first;
-    block->offset = 0;
-    block->next   = NULL; 
-    pool->last  = pool->first;
-    pool->offset = 0;
+    pool->usage = 0;
 
 }
 // }}}
@@ -117,16 +109,35 @@ void mempool_reset(void * memory)
 void * mempool_malloc(void * memory, size_t size)
 {
     mempool * pool;
-    void  * mmem;
+    memblock * mem;
+    void * mmem;
     size_t free; 
-    pool  = (mempool *) memory;
-    free  = pool->size - pool->offset;
-    if (free < size && mempool_add_memblock(pool, size) == TC_FALSE) {
-        return NULL;
-    } 
-    mmem = pool->last->pool +  pool->last->offset;
-    pool->last->offset += size;
-    pool->offset       += size;
+    short ask_mem;
+
+    pool    = (mempool *) memory;
+    ask_mem = 1; 
+
+    for (mem=pool->first; mem; mem = mem->next) {
+        if (mem->free == 1) {
+            free = mem->size - mem->offset;
+            if (free > size) {
+                /* found a free block */
+                ask_mem   = 0;
+                break;
+            }
+        }
+    }
+
+    if (ask_mem) {
+        if (mempool_add_memblock(pool, size) == TC_FALSE) {
+            return NULL;
+        }
+        mem = pool->last;
+    }
+    mmem         = mem->memory + mem->offset;
+    pool->usage += size;
+    mem->offset += size;
+    mem->free    = mem->offset == mem->size ? 0 : 1; 
 
     return mmem;
 }
@@ -169,10 +180,11 @@ static Bool mempool_add_memblock (mempool * pool, size_t rsize)
         return TC_FALSE;
     }
     mem->size   = size;
+    mem->free   = 1;
     mem->offset = 0; 
     mem->next   = NULL;
-    mem->pool   = (void *) pool->malloc( size );
-    if (mem->pool == NULL) {
+    mem->memory = (void *) pool->malloc( size );
+    if (mem->memory == NULL) {
         pool->free(mem);
         return TC_FALSE;
     }
@@ -183,7 +195,6 @@ static Bool mempool_add_memblock (mempool * pool, size_t rsize)
         pool->last->next = mem;
     }
     pool->last   = mem;
-    pool->offset = pool->size; /* Just the last block is free */
     pool->size  += size;
     pool->blocks++;
     return TC_TRUE;
