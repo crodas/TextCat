@@ -78,7 +78,6 @@ void mempool_done(void ** memory)
             if (mem1->size > 0) {
                 xfree(mem1->memory);
             }
-            xfree(mem1);
             mem1 = mem2;
         }
     }
@@ -90,14 +89,14 @@ void mempool_done(void ** memory)
 // mempool_reset(void * memory) {{{
 void mempool_reset(void * memory)
 {
-    mempool * pool;
+    mempool  * pool;
     memblock * block, * next;
-    pool  = (mempool *) memory;
+    pool = (mempool *) memory;
     if (pool->first == NULL) {
         return;
     }
     for (block = pool->first; block; block = block->next) {
-        block->offset = 0;
+        block->offset = sizeof(memblock);
         block->free   = 1;
     }
     pool->usage = 0;
@@ -173,21 +172,19 @@ uchar * mempool_strndup(void * memory, uchar * key, size_t len)
 static Bool mempool_add_memblock (mempool * pool, size_t rsize)
 {
     size_t size;
+    void  * _memblock;
     memblock * mem;
-    size = pool->block_size > rsize ? pool->block_size : rsize;
-    mem  = (memblock *) pool->malloc( sizeof(memblock) );
-    if (mem == NULL) {
+    size       = pool->block_size > rsize ? pool->block_size : rsize;
+    _memblock  = (void *) pool->malloc( size + sizeof(memblock) );
+    if (_memblock == NULL) {
         return TC_FALSE;
     }
+    mem = (memblock *) _memblock;
     mem->size   = size;
     mem->free   = 1;
-    mem->offset = 0; 
+    mem->offset = sizeof(memblock); 
     mem->next   = NULL;
-    mem->memory = (void *) pool->malloc( size );
-    if (mem->memory == NULL) {
-        pool->free(mem);
-        return TC_FALSE;
-    }
+    mem->memory = _memblock;
     if (pool->first == NULL) {
         pool->first = mem;
     }
