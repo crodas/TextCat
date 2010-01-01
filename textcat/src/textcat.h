@@ -42,6 +42,7 @@
 #define TC_ERR_FILE_SIZE    -4
 #define TC_NO_NGRAM         -5
 #define TC_ERR_CALLBACK     -6
+#define TC_ERR_NO_KNOWLEDGE -7
 // }}}
 
 // Data types {{{
@@ -82,6 +83,7 @@ typedef struct TextCat {
     Bool * (*save)(void *, const uchar *, struct NGrams *);
     Bool * (*list)(void *, uchar ***, int *);
     Bool * (*load)(void *, const uchar *, struct NGram *, int );
+    long * (*diff)(struct NGrams *, struct NGrams *);
 
     /* config issues */
     size_t allocate_size;
@@ -125,7 +127,7 @@ Bool TextCat_reset_handlers(TextCat * tc);
 Bool TextCat_load(TextCat *tc);
 
 Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
-Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
+Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams);
 Bool TextCat_list(TextCat * tc, uchar *** list, int * len);
 Bool TextCat_load(TextCat *tc);
 

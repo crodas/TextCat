@@ -116,7 +116,9 @@ Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max)
         bytes = read(fd, content + offset, FILE_BUFFER - offset) + offset;
         for (i=0; offset < bytes; offset++) {
             if (*(content+offset) == '\n') {
-                result->ngram[ncount].str = mempool_strndup(memory, content+i, offset-i);
+                result->ngram[ncount].str       = mempool_strndup(memory, content+i, offset-i);
+                result->ngram[ncount].size      = offset-i;
+                result->ngram[ncount].position  = ncount;
                 i = offset+1;
                 ncount++;
                 if (ncount >= max) {
@@ -140,4 +142,26 @@ Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max)
     result->size = ncount;
     close(fd);
     return TC_TRUE;
+}
+
+long knowledge_diff(NGrams *a, NGrams *b)
+{
+    int ai, bi, diff;
+    long dist;
+    dist = 0;
+    for (ai=0,bi=0; ai < a->size && bi < b->size; ) {
+         diff = strcmp(a->ngram[ai].str, b->ngram[bi].str);
+         if (diff > 0) {
+             dist += 400;
+             bi++;
+         } else if (diff < 0) {
+             dist += 400;
+             ai++;
+         } else {
+             dist += a->ngram[ai].position - b->ngram[bi].position;
+             bi++;
+             ai++;
+         }
+    }
+    return dist;
 }

@@ -15,7 +15,6 @@
    | Author:  César Rodas <crodas@member.fsf.org>                         |
    +----------------------------------------------------------------------+
  */
-
 #include "textcat.h"
 #include "textcat_internal.h"
 
@@ -46,7 +45,7 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->results       = NULL;
     tc->klNames       = NULL;
     tc->klContent     = NULL;
-    tc->klTotal       = 0;
+    tc->klTotal       = -1;
     TextCat_reset_handlers(tc);
     return TC_TRUE;
 }
@@ -66,7 +65,7 @@ Bool TextCat_reset(TextCat * tc)
     tc->results   = NULL;
     tc->klNames   = NULL;
     tc->klContent = NULL;
-    tc->klTotal   = 0;
+    tc->klTotal   = -1;
     return TC_TRUE;
 }
 // }}}
@@ -79,6 +78,7 @@ Bool TextCat_reset_handlers(TextCat * tc)
     tc->save      = &knowledge_save;
     tc->list      = &knowledge_list;
     tc->load      = &knowledge_load;
+    tc->diff      = &knowledge_diff;
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
@@ -99,7 +99,7 @@ Bool TextCat_Destroy(TextCat * tc)
 // }}}
 
 // TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams) {{{
-int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams)
+Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams)
 {
     NGrams * result;
     result_stack * stack, *stack_temp;
@@ -278,6 +278,11 @@ Bool TextCat_load(TextCat *tc)
         tc->error = TC_ERR_CALLBACK;
         return TC_FALSE;
     }
+    if (tc->klTotal == 0) {
+        UNLOCK_INSTANCE(tc);
+        tc->error = TC_ERR_NO_KNOWLEDGE;
+        return TC_FALSE;
+    }
 
     tc->klContent = mempool_calloc(tc->memory, tc->klTotal, sizeof(NGrams));
 
@@ -296,6 +301,25 @@ Bool TextCat_load(TextCat *tc)
     return TC_TRUE;
 }
 // }}}
+
+Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar ** result)
+{
+    NGrams * ptext;
+    int i;
+    long diff;
+    if (TextCat_load(tc) == TC_FALSE) {
+        return TC_FALSE;
+    }
+    if (TextCat_parse(tc, text, length, &ptext) == TC_FALSE) {
+        return TC_FALSE;
+    }
+    LOCK_INSTANCE(tc);
+    for (i=0; i  < tc->klTotal; i++) {
+       diff = tc->diff(ptext, &tc->klContent[i]);
+    }
+    UNLOCK_INSTANCE(tc);
+    return TC_TRUE;
+}
 
 // Default Parsing text callback {{{
 static Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
