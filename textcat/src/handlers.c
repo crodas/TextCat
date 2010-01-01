@@ -97,28 +97,47 @@ Bool knowledge_list(void * memory, uchar *** list, int * size)
 
 Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max)
 {
-    int i, fd;
-    int bytes, offset;
+    int fd;
+    int bytes, offset, ncount, i,e;
     uchar * fname,  * content;
 
     fname = mempool_malloc(memory, strlen(id) + strlen(DIR_NAME) + 2);
     sprintf(fname, "%s/%s", DIR_NAME, id);
 
     fd = open(fname, O_RDONLY);
-    printf("%s %d\n", fname, fd);
     if (fd == -1) {
         return TC_FALSE;
     }
-
     
     content = mempool_malloc(memory, FILE_BUFFER);
+    ncount  = 0;
+    offset  = 0;
     do {
-        offset = 0;
-        bytes  = read(fd, content, FILE_BUFFER);
-
+        bytes = read(fd, content + offset, FILE_BUFFER - offset) + offset;
+        for (i=0; offset < bytes; offset++) {
+            if (*(content+offset) == '\n') {
+                result->ngram[ncount].str = mempool_strndup(memory, content+i, offset-i);
+                i = offset+1;
+                ncount++;
+                if (ncount >= max) {
+                    break;
+                }
+            }
+        }
+        if (ncount >= max) {
+            break;
+        }
+        if (offset > i) {
+            offset -= i;
+            for (e=0; i < bytes; i++,e++) {
+                *(content+e) = *(content+i);
+            }
+            *(content+e) = '\0';
+        } else {
+            offset = 0;
+        }
     } while (bytes > 0);
-    
-
+    result->size = ncount;
     close(fd);
     return TC_TRUE;
 }

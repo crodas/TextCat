@@ -81,7 +81,7 @@ typedef struct TextCat {
     Bool * (*parse_str)(struct TextCat *, uchar *, size_t , int * (*set_ngram)(struct TextCat *, const uchar *, size_t));
     Bool * (*save)(void *, const uchar *, struct NGrams *);
     Bool * (*list)(void *, uchar ***, int *);
-    Bool * (*load)(void *, const uchar *, struct NGrams *, int);
+    Bool * (*load)(void *, const uchar *, struct NGram *, int );
 
     /* config issues */
     size_t allocate_size;
@@ -94,8 +94,9 @@ typedef struct TextCat {
     /* internal stuff */
     ngram_hash hash;
     result_stack  * results;
-    uchar ** knowledges;
-    int nknowledges;
+    uchar ** klNames;
+    struct NGrams * klContent;
+    int klTotal;
 
     /* status */
     int error;
@@ -119,9 +120,14 @@ typedef struct NGrams {
 
 Bool TextCat_Init(TextCat ** tc);
 Bool TextCat_Destroy(TextCat * tc);
-int TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
 Bool TextCat_reset(TextCat * tc);
 Bool TextCat_reset_handlers(TextCat * tc);
+Bool TextCat_load(TextCat *tc);
+
+Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
+Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
+Bool TextCat_list(TextCat * tc, uchar *** list, int * len);
+Bool TextCat_load(TextCat *tc);
 
 /*
  * Local variables:
