@@ -24,39 +24,45 @@
     #define DIR_NAME "./knowledge/"
 #endif
 
-Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * result)
+#define FILE_BUFFER 1024
+
+Bool knowledge_save(void * memory, const uchar * id, NGrams * result)
 {
     uchar * fname, * content;
-    long i, len, offset;
+    long i, ret, offset;
     int fd;
 
-    fname = mempool_malloc(tc->memory, strlen(id) + strlen(DIR_NAME) + 2);
+    fname = mempool_malloc(memory, strlen(id) + strlen(DIR_NAME) + 2);
     sprintf(fname, "%s/%s", DIR_NAME, id);
     mkdir(DIR_NAME, 0777);
+
     fd = open(fname, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if (fd == -1) {
-        tc->error = TC_NO_FILE;
         return TC_FALSE;
     }
-    len     = tc->max_ngrams * (tc->max_ngram_len +1) + 1;
-    content = mempool_malloc(tc->memory, len); 
-    offset  = 0;
+    content = mempool_malloc(memory, FILE_BUFFER); 
+    if (content == NULL) {
+        return TC_FALSE;
+    }
 
     /* sort by freq */
     textcat_ngram_sort_by_freq(result);
 
-    for(i=0; i < result->size; i++) {
+    for(i=0,offset=0; i < result->size; i++) {
+        if (offset + result->ngram[i].size >= FILE_BUFFER - 1) {
+            ret    = write(fd, content, offset);
+            offset = 0;
+        }
         strncpy(content+offset, result->ngram[i].str, result->ngram[i].size);
         offset += result->ngram[i].size+1;
         *(content+ offset-1) = '\n';
     }
-    *(content+offset) = '\0';
-    i = write(fd, content, offset);
+    ret = write(fd, content, offset);
     close(fd);
     return TC_TRUE;
 }
 
-Bool knowledge_list(TextCat * tc, uchar *** list, int * size) 
+Bool knowledge_list(void * memory, uchar *** list, int * size) 
 {
     DIR * fd;
     struct dirent * info;
@@ -64,24 +70,55 @@ Bool knowledge_list(TextCat * tc, uchar *** list, int * size)
 
     fd = opendir(DIR_NAME);
     if (fd == NULL) {
-        tc->error = TC_NO_FILE;
         return TC_FALSE;
     }
     len = -2; /* . and .. aren't files */
     i   = 0;
     while (readdir(fd))  len++;
     rewinddir(fd);
-    *list = mempool_malloc(tc->memory, len * sizeof(char *));
-    CHECK_MEM(*list);
+    *list = mempool_malloc(memory, len * sizeof(char *));
+    if (*list == NULL) {
+        return TC_FALSE;
+    }
     while (info = readdir(fd)) {
         if (strcmp(info->d_name, ".") == 0 || strcmp(info->d_name, "..") == 0) {
             continue;
         }
-        *(*list+i) = mempool_strdup(tc->memory, info->d_name);
-        CHECK_MEM(*(*list+i));
+        *(*list+i) = mempool_strdup(memory, info->d_name);
+        if (*(*list+i) == NULL) {
+            return TC_FALSE;
+        }
         i++;
     }
     *size = len;
     closedir(fd);
+    return TC_TRUE;
+}
+
+Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max)
+{
+    int i, fd;
+    int bytes, offset;
+    uchar * fname,  * content;
+
+    fname = mempool_malloc(memory, strlen(id) + strlen(DIR_NAME) + 2);
+    sprintf(fname, "%s/%s", DIR_NAME, id);
+
+    fd = open(fname, O_RDONLY);
+    printf("%s %d\n", fname, fd);
+    if (fd == -1) {
+        return TC_FALSE;
+    }
+
+    
+    content = mempool_malloc(memory, FILE_BUFFER);
+    do {
+        offset = 0;
+        bytes  = read(fd, content, FILE_BUFFER);
+
+    } while (bytes > 0);
+    
+
+    close(fd);
     return TC_TRUE;
 }

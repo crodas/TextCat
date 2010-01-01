@@ -90,7 +90,7 @@ void mempool_done(void ** memory)
 void mempool_reset(void * memory)
 {
     mempool  * pool;
-    memblock * block, * next;
+    memblock * block, * next, *aux;
     pool = (mempool *) memory;
     if (pool->first == NULL) {
         return;
@@ -98,9 +98,17 @@ void mempool_reset(void * memory)
     for (block = pool->first; block; block = block->next) {
         block->offset = sizeof(memblock);
         block->free   = 1;
+        if (aux && block->size > pool->block_size) {
+            pool->blocks--;
+            pool->size -=  block->size;
+            aux->next   = block->next;
+            pool->free(block->memory);
+            block = aux;
+        } 
+        aux = block;
     }
     pool->usage = 0;
-
+    pool->last  = aux;
 }
 // }}}
 

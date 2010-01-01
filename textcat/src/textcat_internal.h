@@ -60,8 +60,9 @@ Bool textcat_init_hash(TextCat * tc);
 void textcat_destroy_hash(TextCat * tc);
 /* */
 Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
-Bool knowledge_save(TextCat * tc, const uchar * id, NGrams * ngrams);
-Bool knowledge_list(TextCat * tc, uchar *** list, int * size);
+Bool knowledge_save(void *, const uchar * id, NGrams * ngrams);
+Bool knowledge_list(void *, uchar *** list, int * size);
+Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max);
 /* }}} */
 
 #define mempool_strdup(x,y) mempool_strndup(x, y, strlen(y))

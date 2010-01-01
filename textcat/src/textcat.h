@@ -41,6 +41,7 @@
 #define TC_NO_FILE          -3
 #define TC_ERR_FILE_SIZE    -4
 #define TC_NO_NGRAM         -5
+#define TC_ERR_CALLBACK     -6
 // }}}
 
 // Data types {{{
@@ -78,17 +79,24 @@ typedef struct TextCat {
     void * (*malloc)(size_t);
     void * (*free)(void *);
     Bool * (*parse_str)(struct TextCat *, uchar *, size_t , int * (*set_ngram)(struct TextCat *, const uchar *, size_t));
-    Bool * (*save)(struct TextCat *, const uchar *, struct NGrams *);
-    Bool * (*list)(struct TextCat *, uchar ***, int *);
+    Bool * (*save)(void *, const uchar *, struct NGrams *);
+    Bool * (*list)(void *, uchar ***, int *);
+    Bool * (*load)(void *, const uchar *, struct NGrams *, int);
+
     /* config issues */
     size_t allocate_size;
     int hash_size;
     int min_ngram_len;
     int max_ngram_len;
     int max_ngrams;
+
+
     /* internal stuff */
     ngram_hash hash;
     result_stack  * results;
+    uchar ** knowledges;
+    int nknowledges;
+
     /* status */
     int error;
     int status;

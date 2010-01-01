@@ -39,13 +39,4 @@ int main(int argc, char * argv[])
     }
     TextCat_Destroy(tc);
     return 0;
-
-    /* list all the knowledges */
-    uchar ** files;
-    int len;
-    TextCat_list(tc, &files, &len);
-    for (i=0; i < len; i++) {
-        printf("Knowledge: %s\n", files[i]);
-    }
-
 }

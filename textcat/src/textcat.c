@@ -44,6 +44,8 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->memory        = NULL;
     tc->temp          = NULL;
     tc->results       = NULL;
+    tc->knowledges    = NULL;
+    tc->nknowledges   = 0;
     TextCat_reset_handlers(tc);
     return TC_TRUE;
 }
@@ -60,7 +62,9 @@ Bool TextCat_reset(TextCat * tc)
         mempool_reset(tc->temp);
     }
     UNLOCK_INSTANCE(tc);
-    tc->results = NULL;
+    tc->results     = NULL;
+    tc->knowledges  = NULL;
+    tc->nknowledges = 0;
     return TC_TRUE;
 }
 // }}}
@@ -72,6 +76,7 @@ Bool TextCat_reset_handlers(TextCat * tc)
     tc->parse_str = &textcat_default_text_parser;
     tc->save      = &knowledge_save;
     tc->list      = &knowledge_list;
+    tc->load      = &knowledge_load;
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
@@ -100,6 +105,7 @@ int TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ng
     LOCK_INSTANCE(tc);
 
     if (textcat_init_hash(tc) == TC_FALSE) {
+        UNLOCK_INSTANCE(tc);
         return TC_FALSE;
     }
     
@@ -147,33 +153,67 @@ int TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
     int fd;
     size_t bytes;
     uchar * buffer;
-    struct stat info;
+    NGrams * result;
+    result_stack * stack, *stack_temp;
+
+    LOCK_INSTANCE(tc);
+    if (textcat_init_hash(tc) == TC_FALSE) {
+        UNLOCK_INSTANCE(tc);
+        return TC_FALSE;
+    }
+    
 
     fd = open(filename, O_RDONLY);
     if (fd == -1) {
+        UNLOCK_INSTANCE(tc);
         tc->error = TC_NO_FILE;
         return TC_FALSE;
     }
-    if (fstat(fd, &info) == -1) {
-        tc->error = TC_NO_FILE;
-        return TC_FALSE;
-    }
-    buffer = tc->malloc(info.st_size + 1);
-    if (buffer == NULL) {
-        tc->error = TC_ERR_MEM;
-        return TC_FALSE;
-    }
-    bytes  = read(fd, buffer, info.st_size);
-    if (bytes != info.st_size) {
-        tc->free(buffer);
-        tc->error = TC_ERR_FILE_SIZE;
-        return TC_FALSE;
-    }
+
+    buffer = mempool_malloc(tc->temp, 1024);
+    CHECK_MEM(buffer);
+
+    do {
+        bytes = read(fd, buffer, 1024);
+        if (bytes && tc->parse_str(tc, buffer, bytes, &textcat_ngram_incr) == TC_FALSE) {
+            textcat_destroy_hash(tc);
+            UNLOCK_INSTANCE(tc);
+            return TC_FALSE;
+        }
+    } while (bytes > 0);
     close(fd);
-    *(buffer+bytes) = '\0';
-    fd = TextCat_parse(tc, buffer, bytes, ngrams);
-    tc->free(buffer);
-    return fd;
+
+    if (textcat_copy_result(tc, &result) == TC_FALSE) {
+        textcat_destroy_hash(tc);
+        UNLOCK_INSTANCE(tc);
+        return TC_FALSE;
+    }
+
+    /* add the result to our Result Stack {{{ */
+    stack = mempool_malloc(tc->memory, sizeof(result_stack));
+    CHECK_MEM_EX(stack, textcat_destroy_hash(tc); tc->status=TC_FREE; )
+    stack->result = result;
+    stack->next   = NULL;
+    if (tc->results == NULL) {
+        tc->results = stack;
+    } else {
+        stack_temp = tc->results;
+        while (stack_temp->next != NULL) {
+            stack_temp = stack_temp->next;
+        }
+        stack_temp->next = stack;
+    }
+    /* }}} */
+
+    if (ngrams != NULL) {
+        *ngrams = result;
+    }
+
+    textcat_destroy_hash(tc);
+    tc->error  = TC_OK;
+
+    UNLOCK_INSTANCE(tc);
+    return TC_TRUE;
 }
 // }}}
 
@@ -191,7 +231,8 @@ Bool TextCat_save(TextCat * tc, const uchar * id)
     if (textcat_result_merge(tc, tc->results, &results) == TC_FALSE) {
         return TC_FALSE;
     }
-    if (tc->save(tc, id, results) == TC_FALSE) {
+    if (tc->save(tc->temp, id, results) == TC_FALSE) {
+        tc->error = TC_ERR_CALLBACK;
         return TC_FALSE;
     }
     TextCat_reset(tc);
@@ -200,13 +241,39 @@ Bool TextCat_save(TextCat * tc, const uchar * id)
 }
 // }}}
 
+// TextCat_list(TextCat * tc, uchar *** list, int * len) {{{
 Bool TextCat_list(TextCat * tc, uchar *** list, int * len)
 {
     Bool ret;
+    if (tc->knowledges ==  NULL) {
+        if (tc->list(tc->memory, &tc->knowledges, &tc->nknowledges) == TC_FALSE) {
+            tc->error = TC_ERR_CALLBACK;
+            return TC_FALSE;
+        }
+    }
+    if (list != NULL) {
+        *list = tc->knowledges;
+        *len  = tc->nknowledges;
+    }
+    return TC_TRUE;
+}
+// }}}
+
+Bool TextCat_load(TextCat *tc) 
+{
+    uchar ** list;
+    int len;
+    int i;
     LOCK_INSTANCE(tc);
-    ret = tc->list(tc, list, len);
+    if (TextCat_list(tc, NULL, NULL) == TC_FALSE) {
+        UNLOCK_INSTANCE(tc);
+        tc->error = TC_ERR_CALLBACK;
+        return TC_FALSE;
+    }
+    for (i=0; i < tc->nknowledges; i++) {
+        tc->load(tc->memory, tc->knowledges[i], NULL, tc->max_ngrams);
+    }
     UNLOCK_INSTANCE(tc);
-    return ret;
 }
 
 // Default Parsing text callback {{{
