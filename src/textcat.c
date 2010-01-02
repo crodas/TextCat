@@ -301,7 +301,6 @@ Bool TextCat_load(TextCat *tc)
 }
 // }}}
 
-
 // TextCat_getCategory(TextCat *, const uchar *, size_t, uchar **, int *) {{{
 static int _ranking_sort(void * a, void *b)
 {
