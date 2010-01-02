@@ -92,6 +92,7 @@ void mempool_reset(void * memory)
     mempool  * pool;
     memblock * block, * next, *aux;
     pool = (mempool *) memory;
+    aux  = NULL;
     if (pool->first == NULL) {
         return;
     }
