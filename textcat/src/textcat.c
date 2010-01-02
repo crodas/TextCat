@@ -18,10 +18,6 @@
 #include "textcat.h"
 #include "textcat_internal.h"
 
-/* Backward declarations {{{ */
-static Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t));
-/* }}} */
-
 // TextCat_Init(TextCat ** tcc) {{{
 Bool TextCat_Init(TextCat ** tcc)
 {
@@ -39,6 +35,7 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->max_ngrams    = TC_MAX_NGRAMS;
     tc->error         = TC_OK;
     tc->status        = TC_FREE;
+    tc->threshold     = TC_THRESHOLD;
     *tcc              = tc;
     tc->memory        = NULL;
     tc->temp          = NULL;
@@ -61,11 +58,11 @@ Bool TextCat_reset(TextCat * tc)
     if (tc->temp != NULL) {
         mempool_reset(tc->temp);
     }
-    UNLOCK_INSTANCE(tc);
     tc->results   = NULL;
     tc->klNames   = NULL;
     tc->klContent = NULL;
     tc->klTotal   = -1;
+    UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
 // }}}
@@ -78,7 +75,7 @@ Bool TextCat_reset_handlers(TextCat * tc)
     tc->save      = &knowledge_save;
     tc->list      = &knowledge_list;
     tc->load      = &knowledge_load;
-    tc->diff      = &knowledge_diff;
+    tc->distance  = &knowledge_dist;
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
@@ -237,8 +234,8 @@ Bool TextCat_save(TextCat * tc, const uchar * id)
         tc->error = TC_ERR_CALLBACK;
         return TC_FALSE;
     }
-    TextCat_reset(tc);
     UNLOCK_INSTANCE(tc);
+    TextCat_reset(tc);
     return TC_TRUE;
 }
 // }}}
@@ -296,6 +293,8 @@ Bool TextCat_load(TextCat *tc)
             UNLOCK_INSTANCE(tc);
             return TC_FALSE;
         }
+        /* sort back from String, for fast comparition */
+        textcat_ngram_sort_by_str(&tc->klContent[i]);
     }
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
@@ -303,16 +302,21 @@ Bool TextCat_load(TextCat *tc)
 // }}}
 
 
-static int ranking_sort(void * a, void *b)
+// TextCat_getCategory(TextCat *, const uchar *, size_t, uchar **, int *) {{{
+static int _ranking_sort(void * a, void *b)
 {
-    return ((long) a) - ((long)b);
+    _cands * aa, * bb;
+    aa = a;
+    bb = b;
+    return aa->dist - bb->dist;
 }
 
-Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar ** result)
+Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *** result, int * n)
 {
     NGrams * ptext;
     int i;
-    long * diff, threshold;
+    _cands * dists;
+    long threshold;
     if (TextCat_load(tc) == TC_FALSE) {
         return TC_FALSE;
     }
@@ -320,64 +324,29 @@ Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *
         return TC_FALSE;
     }
     LOCK_INSTANCE(tc);
-    diff = mempool_calloc(tc->memory, tc->klTotal, sizeof(long));
+    dists = mempool_calloc(tc->memory, tc->klTotal, sizeof(_cands));
     for (i=0; i  < tc->klTotal; i++) {
-       *(diff+i) = tc->diff(ptext, &tc->klContent[i]);
-       printf("%s diff: %d %d\n", tc->klNames[i], *(diff+i), LONG_MAX);
+        dists[i].dist = tc->distance(ptext, &tc->klContent[i]);
+        dists[i].name = tc->klNames[i];
+    }
+    qsort(dists, tc->klTotal, sizeof(_cands),_ranking_sort);
+
+    threshold = dists[0].dist * tc->threshold;
+    for (i=0; i  < tc->klTotal; i++) {
+        if (threshold < dists[i].dist) {
+            break;
+        }
+    }
+    *n = i;
+    *result = mempool_calloc(tc->memory,i, sizeof(uchar *));
+    for (i=0; i < *n;i++) {
+        *(*result+i) = dists[i].name;
     }
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
-
-// Default Parsing text callback {{{
-static Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
-{
-    int i,e,x, valid;
-    uchar *ntext;
-    /* create a copy of the text in order to do a best-effort
-     * to clean it, setting everything to lower-case, removing
-     * non-alpha and whitespaces.
-     */
-    ntext = mempool_malloc(tc->temp,length+1);
-    for (i=0, e=0; i < length; i++) {
-        if (isalpha(text[i])) {
-            ntext[e++] = tolower(text[i]);
-        } else {
-            while (++i < length && !isalpha(text[i]));
-            ntext[e++] = ' ';
-            i--;
-        }
-    }
-    ntext[e++] = '\0';
-    length     = e - 1;
-    /* extract the ngrams, and pass-it to the library (with the callback) */
-    for (e=0; e < length; e++) {
-        for (i=tc->min_ngram_len; i <= tc->max_ngram_len; i++) {
-            if (e+i > length) {
-                break;
-            }
-
-            /* allow spaces only at the beging and end (in order to reduce n-grams quantities) {{{ */
-            valid = 1;
-            for (x=1; x < i-1; x++) {
-                if (isblank(*(ntext+e+x))) {
-                    valid = 0;
-                    break;
-                }
-            }
-            if (valid==0) {
-                continue;
-            }
-            /* }}} */
-
-            if (set_ngram(tc, ntext+e, i) == TC_FALSE) {
-                return TC_FALSE;
-            }
-        }
-    }
-    return TC_TRUE;
-}
 // }}}
+
 
 /*
  * Local variables:

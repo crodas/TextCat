@@ -144,25 +144,88 @@ Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max)
     return TC_TRUE;
 }
 
-long knowledge_diff(NGrams *a, NGrams *b)
+long knowledge_dist(NGrams *a, NGrams *b)
 {
     int ai, bi, diff;
     long dist;
-    int max;
+    int max, match;
     dist = 0;
     max  = a->size > b->size ? a->size : b->size;
+    max++;
+    match = 0;
+
     for (ai=0,bi=0; ai < a->size && bi < b->size; ) {
          diff = strcmp(a->ngram[ai].str, b->ngram[bi].str);
-         if (diff > 0) {
+         if (diff < 0) {
              ai++;
-         } else if (diff < 0) {
+         } else if (diff > 0) {
              dist += max;
              bi++;
          } else {
-             dist += a->ngram[ai].position - b->ngram[bi].position;
+             dist += abs(a->ngram[ai].position - b->ngram[bi].position);
+             match++;
              bi++;
              ai++;
          }
     }
-    return dist/max;
+    dist += max * (b->size - bi);
+    return (long)dist/max;
 }
+// Default Parsing text callback {{{
+Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
+{
+    int i,e,x, valid;
+    uchar *ntext;
+    /* create a copy of the text in order to do a best-effort
+     * to clean it, setting everything to lower-case, removing
+     * non-alpha and whitespaces.
+     */
+    ntext = mempool_malloc(tc->temp,length+1);
+    for (i=0, e=0; i < length; i++) {
+        if (isalpha(text[i])) {
+            ntext[e++] = tolower(text[i]);
+        } else {
+            while (++i < length && !isalpha(text[i]));
+            ntext[e++] = ' ';
+            i--;
+        }
+    }
+    ntext[e++] = '\0';
+    length     = e - 1;
+    /* extract the ngrams, and pass-it to the library (with the callback) */
+    for (e=0; e < length; e++) {
+        for (i=tc->min_ngram_len; i <= tc->max_ngram_len; i++) {
+            if (e+i > length) {
+                break;
+            }
+
+            /* allow spaces only at the beging and end (in order to reduce n-grams quantities) {{{ */
+            valid = 1;
+            for (x=1; x < i-1; x++) {
+                if (isblank(*(ntext+e+x))) {
+                    valid = 0;
+                    break;
+                }
+            }
+            if (valid==0) {
+                continue;
+            }
+            /* }}} */
+
+            if (set_ngram(tc, ntext+e, i) == TC_FALSE) {
+                return TC_FALSE;
+            }
+        }
+    }
+    return TC_TRUE;
+}
+// }}}
+
+/*
+ * Local variables:
+ * tab-width: 4
+ * c-basic-offset: 4
+ * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
+ */

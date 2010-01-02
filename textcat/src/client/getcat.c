@@ -22,9 +22,16 @@ int main(int argc, char * argv[])
 {
     TextCat * tc;
     int i;
+    uchar ** langs;
+    int total;
+
 
     TextCat_Init(&tc);
-        TextCat_getCategory(tc, argv[1], strlen(argv[1]), NULL);
+    for(i=1; i < argc;i++) {
+        printf("Text: %s\n", argv[i]);
+        TextCat_getCategory(tc, argv[i], strlen(argv[i]), &langs, &total);
+        printf("\tLanguage: %s (outof %d)\n", langs[0], total);
+    }
     TextCat_Destroy(tc);
     return 0;
 }

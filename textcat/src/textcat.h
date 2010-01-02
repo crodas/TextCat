@@ -32,8 +32,9 @@
 #define TC_FALSE        0
 #define TC_FREE         1
 #define TC_BUSY         0
-#define MIN_NGRAM_LEN   2
+#define MIN_NGRAM_LEN   1
 #define MAX_NGRAM_LEN   5
+#define TC_THRESHOLD    1.003
 
 #define TC_OK               TC_TRUE
 #define TC_ERR              -1
@@ -83,7 +84,7 @@ typedef struct TextCat {
     Bool * (*save)(void *, const uchar *, struct NGrams *);
     Bool * (*list)(void *, uchar ***, int *);
     Bool * (*load)(void *, const uchar *, struct NGram *, int );
-    long * (*diff)(struct NGrams *, struct NGrams *);
+    long * (*distance)(struct NGrams *, struct NGrams *);
 
     /* config issues */
     size_t allocate_size;
@@ -91,6 +92,7 @@ typedef struct TextCat {
     int min_ngram_len;
     int max_ngram_len;
     int max_ngrams;
+    float threshold;
 
 
     /* internal stuff */
@@ -125,6 +127,7 @@ Bool TextCat_Destroy(TextCat * tc);
 Bool TextCat_reset(TextCat * tc);
 Bool TextCat_reset_handlers(TextCat * tc);
 Bool TextCat_load(TextCat *tc);
+Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *** result, int * n);
 
 Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
 Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams);

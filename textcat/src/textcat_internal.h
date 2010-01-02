@@ -41,6 +41,11 @@
 
 #define UNLOCK_INSTANCE(tc)   tc->status = TC_FREE;
 
+typedef struct {
+    long dist;
+    uchar * name;
+} _cands;
+
 /* Backward declarations {{{ */
 Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
 void mempool_done(void ** memory);
@@ -64,7 +69,8 @@ Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result);
 Bool knowledge_save(void *, const uchar * id, NGrams * ngrams);
 Bool knowledge_list(void *, uchar *** list, int * size);
 Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max);
-long knowledge_diff(NGrams *a, NGrams *b);
+long knowledge_dist(NGrams *a, NGrams *b);
+Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t));
 /* }}} */
 
 #define mempool_strdup(x,y) mempool_strndup(x, y, strlen(y))

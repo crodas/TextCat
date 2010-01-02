@@ -201,7 +201,7 @@ static int textcat_qsort_fnc_freq(const void * a, const void * b)
      * by string, in a descendent fashion
      */
     if (diff == 0) {
-        diff = strcmp(aa->str, bb->str);
+        diff = strcmp(bb->str, aa->str);
     }
     return diff;
 }
@@ -253,6 +253,13 @@ Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result)
 }
 // }}}
 
+void ngrams_print(NGrams * ng)
+{
+    int i;
+    for (i=0; i < ng->size; i++) {
+        printf("[%s] %d %d\n", ng->ngram[i].str, ng->ngram[i].position, ng->ngram[i].freq);
+    }
+}
 
 /*
  * Local variables:
