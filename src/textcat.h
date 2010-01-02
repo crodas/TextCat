@@ -79,12 +79,12 @@ typedef struct TextCat {
 
     /* callback */
     void * (*malloc)(size_t);
-    void * (*free)(void *);
-    Bool * (*parse_str)(struct TextCat *, uchar *, size_t , int * (*set_ngram)(struct TextCat *, const uchar *, size_t));
-    Bool * (*save)(void *, const uchar *, struct NGrams *);
-    Bool * (*list)(void *, uchar ***, int *);
-    Bool * (*load)(void *, const uchar *, struct NGram *, int );
-    long * (*distance)(struct NGrams *, struct NGrams *);
+    void (*free)(void *);
+    Bool (*parse_str)(struct TextCat *, uchar *, size_t , int * (*set_ngram)(struct TextCat *, const uchar *, size_t));
+    Bool (*save)(void *, const uchar *, struct NGrams *);
+    Bool (*list)(void *, uchar ***, int *);
+    Bool (*load)(void *, const uchar *, struct NGram *, int );
+    long (*distance)(struct NGrams *, struct NGrams *);
 
     /* config issues */
     size_t allocate_size;

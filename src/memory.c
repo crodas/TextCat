@@ -35,14 +35,14 @@ typedef struct mempool {
     size_t blocks;
     /* callback */
     void * (*malloc)(size_t);
-    void * (*free)(void *);
+    void (*free)(void *);
     size_t block_size;
 } mempool;
 
 static Bool mempool_add_memblock (mempool * pool, size_t rsize);
 
 //mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size) {{{
-extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size)
+extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void (*xfree)(void *), size_t block_size)
 {
     mempool * mem;
     mem = xmalloc(sizeof(mempool));
@@ -68,7 +68,7 @@ void mempool_done(void ** memory)
 {
     mempool * mem;
     mem = *memory;
-    void * (*xfree)(size_t);
+    void  (*xfree)(size_t);
     xfree = mem->free;
     if (mem->size > 0) {
         memblock * mem1, * mem2;
@@ -84,7 +84,7 @@ void mempool_done(void ** memory)
     xfree(*memory);
     *memory = 0;
 }
-// }}}
+// }}} 
 
 // mempool_reset(void * memory) {{{
 void mempool_reset(void * memory)

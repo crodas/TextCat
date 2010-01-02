@@ -47,7 +47,7 @@ typedef struct {
 } _cands;
 
 /* Backward declarations {{{ */
-Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size);
+Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void (*xfree)(void *), size_t block_size);
 void mempool_done(void ** memory);
 void * mempool_calloc(void * memory, size_t nmemb, size_t size);
 void * mempool_malloc(void * memory, size_t size);
