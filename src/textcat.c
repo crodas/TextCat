@@ -42,6 +42,7 @@ Bool TextCat_Init(TextCat ** tcc)
     tc->results       = NULL;
     tc->klNames       = NULL;
     tc->klContent     = NULL;
+    tc->param         = NULL;
     tc->klTotal       = -1;
     TextCat_reset_handlers(tc);
     return TC_TRUE;
@@ -108,7 +109,7 @@ Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** n
         return TC_FALSE;
     }
     
-    if (tc->parse_str(tc, text, length, &textcat_ngram_incr) == TC_FALSE) {
+    if (tc->parse_str(tc, text, length, &textcat_ngram_incr, tc->param) == TC_FALSE) {
         textcat_destroy_hash(tc);
         UNLOCK_INSTANCE(tc);
         return TC_FALSE;
@@ -174,7 +175,7 @@ Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
 
     do {
         bytes = read(fd, buffer, 1024);
-        if (bytes && tc->parse_str(tc, buffer, bytes, &textcat_ngram_incr) == TC_FALSE) {
+        if (bytes && tc->parse_str(tc, buffer, bytes, &textcat_ngram_incr, tc->param) == TC_FALSE) {
             textcat_destroy_hash(tc);
             UNLOCK_INSTANCE(tc);
             return TC_FALSE;
@@ -230,7 +231,7 @@ Bool TextCat_save(TextCat * tc, const uchar * id)
     if (textcat_result_merge(tc, tc->results, &results) == TC_FALSE) {
         return TC_FALSE;
     }
-    if (tc->save(tc->temp, id, results) == TC_FALSE) {
+    if (tc->save(tc->temp, id, results, tc->param) == TC_FALSE) {
         tc->error = TC_ERR_CALLBACK;
         return TC_FALSE;
     }
@@ -245,7 +246,7 @@ Bool TextCat_list(TextCat * tc, uchar *** list, int * len)
 {
     Bool ret;
     if (tc->klNames ==  NULL) {
-        if (tc->list(tc->memory, &tc->klNames, &tc->klTotal) == TC_FALSE) {
+        if (tc->list(tc->memory, &tc->klNames, &tc->klTotal, tc->param) == TC_FALSE) {
             tc->error = TC_ERR_CALLBACK;
             return TC_FALSE;
         }
@@ -287,7 +288,7 @@ Bool TextCat_load(TextCat *tc)
         tc->klContent[i].ngram = mempool_calloc(tc->memory, tc->max_ngrams, sizeof(NGram));
         CHECK_MEM(tc->klContent[i].ngram);
         tc->klContent[i].ngram->size = tc->max_ngrams;
-        if (tc->load(tc->memory, tc->klNames[i], &tc->klContent[i], tc->max_ngrams) == TC_FALSE) {
+        if (tc->load(tc->memory, tc->klNames[i], &tc->klContent[i], tc->max_ngrams, tc->param) == TC_FALSE) {
             tc->klContent = NULL;
             tc->error = TC_ERR_CALLBACK;
             UNLOCK_INSTANCE(tc);
@@ -325,7 +326,7 @@ Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *
     LOCK_INSTANCE(tc);
     dists = mempool_calloc(tc->memory, tc->klTotal, sizeof(_cands));
     for (i=0; i  < tc->klTotal; i++) {
-        dists[i].dist = tc->distance(ptext, &tc->klContent[i]);
+        dists[i].dist = tc->distance(ptext, &tc->klContent[i], tc->param);
         dists[i].name = tc->klNames[i];
     }
     qsort(dists, tc->klTotal, sizeof(_cands),_ranking_sort);
