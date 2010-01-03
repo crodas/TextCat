@@ -26,7 +26,7 @@
 
 #define FILE_BUFFER 1024
 
-Bool knowledge_save(void * memory, const uchar * id, NGrams * result)
+Bool knowledge_save(void * memory, const uchar * id, NGrams * result, void * param)
 {
     uchar * fname, * content;
     long i, ret, offset;
@@ -62,7 +62,7 @@ Bool knowledge_save(void * memory, const uchar * id, NGrams * result)
     return TC_TRUE;
 }
 
-Bool knowledge_list(void * memory, uchar *** list, int * size) 
+Bool knowledge_list(void * memory, uchar *** list, int * size, void * param) 
 {
     DIR * fd;
     struct dirent * info;
@@ -95,7 +95,7 @@ Bool knowledge_list(void * memory, uchar *** list, int * size)
     return TC_TRUE;
 }
 
-Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max)
+Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max, void * param)
 {
     int fd;
     int bytes, offset, ncount, i,e;
@@ -144,7 +144,7 @@ Bool knowledge_load(void * memory, const uchar * id, NGrams * result, int max)
     return TC_TRUE;
 }
 
-long knowledge_dist(NGrams *a, NGrams *b)
+long knowledge_dist(NGrams *a, NGrams *b, void * param)
 {
     int ai, bi, diff;
     long dist;
@@ -171,8 +171,9 @@ long knowledge_dist(NGrams *a, NGrams *b)
     dist += max * (b->size - bi);
     return (long)dist/max;
 }
+
 // Default Parsing text callback {{{
-Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t))
+Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t), void * param)
 {
     int i,e,x, valid;
     uchar *ntext;
