@@ -133,34 +133,48 @@ void textcat_destroy_hash(TextCat * tc)
 // }}}
 
 //textcat_copy_result(TextCat * tc, NGrams ** result) {{{
+//
+static int textcat_hash_sort(const void * a, const void *b)
+{
+    int diff = 0;
+    ngram_t *aa, *bb;
+    aa = *(ngram_t **) a;
+    bb = *(ngram_t **) b;
+    diff = bb->freq - aa->freq;
+    /* if they have the same frequency, let's order 
+     * by string, in a descendent fashion
+     */
+    if (diff == 0) {
+        diff = strcmp(bb->str, aa->str);
+    }
+    return diff;
+}
+
 Bool textcat_copy_result(TextCat * tc, NGrams ** result)
 {
-    NGrams * temp, * ngrams;
-    ngram_t * entry;
+    NGrams * ngrams;
+    ngram_t * entry, **temp;
     long i, e;
     long length;
 
-    temp = (NGrams *) mempool_malloc(tc->temp, sizeof(NGrams));
+    temp = (ngram_t **) mempool_malloc(tc->temp, sizeof(ngram_t *) * tc->hash.ngrams);
     CHECK_MEM(temp);
-    temp->ngram = (NGram *) mempool_calloc(tc->temp, tc->hash.ngrams, sizeof(NGram));
-    CHECK_MEM(temp->ngram);
-    temp->size = tc->hash.ngrams;
 
     for (i=0, e=0; i < tc->hash.size; i++) {
         for (entry = tc->hash.table[i].first; entry ; entry = entry->next) {
-            temp->ngram[e].str      = entry->str;
-            temp->ngram[e].freq     = entry->freq;
-            temp->ngram[e].size     = entry->len;
-            temp->ngram[e].position = 0;
+            *(temp+e) = entry;
             e++;
         }
     }
 
-    /* sort by frequency */
-    textcat_ngram_sort_by_freq(temp);
+    /* simple checking */
+    assert(e == tc->hash.ngrams);
+
+    /* sort by the hash by frequency */
+    qsort(temp, tc->hash.ngrams, sizeof(ngram_t *), &textcat_hash_sort);
 
     /* guess the number of desires N-grams */
-    length = temp->size > tc->max_ngrams ?  tc->max_ngrams : temp->size;
+    length = tc->hash.ngrams > tc->max_ngrams ?  tc->max_ngrams : tc->hash.ngrams;
 
     /* preparing the result */
     ngrams = (NGrams *) mempool_malloc(tc->memory, sizeof(NGrams));
@@ -171,9 +185,9 @@ Bool textcat_copy_result(TextCat * tc, NGrams ** result)
 
     /* copying the first 'length' ngrams */
     for (i=0; i < length; i++) {
-        ngrams->ngram[i].str      = mempool_strndup(tc->memory,temp->ngram[i].str, temp->ngram[i].size);
-        ngrams->ngram[i].freq     = temp->ngram[i].freq;
-        ngrams->ngram[i].size     = temp->ngram[i].size;
+        ngrams->ngram[i].str      = mempool_strndup(tc->memory,temp[i]->str, temp[i]->len);
+        ngrams->ngram[i].freq     = temp[i]->freq;
+        ngrams->ngram[i].size     = temp[i]->len;
         ngrams->ngram[i].position = i;
         CHECK_MEM(ngrams->ngram[i].str);
     }
