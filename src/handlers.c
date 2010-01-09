@@ -5,7 +5,7 @@
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
    | available through the world-wide-web at the following url:           |
-   | http://www.php.net/license/3_01.txt                                  |
+   | http:/* www.php.net/license/3_01.txt                                  |
    | If you did not receive a copy of the PHP license and are unable to   |
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
@@ -170,7 +170,7 @@ long knowledge_dist(NGrams *a, NGrams *b, void * param)
     return (long)dist/max;
 }
 
-// Default Parsing text callback {{{
+/* Default Parsing text callback {{{ */
 Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t), void * param)
 {
     int i,e,x, valid;
@@ -218,7 +218,7 @@ Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length,
     }
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
 /*
  * Local variables:

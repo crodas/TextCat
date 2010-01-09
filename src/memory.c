@@ -5,7 +5,7 @@
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
    | available through the world-wide-web at the following url:           |
-   | http://www.php.net/license/3_01.txt                                  |
+   | http:/* www.php.net/license/3_01.txt                                  |
    | If you did not receive a copy of the PHP license and are unable to   |
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
@@ -39,7 +39,7 @@ typedef struct mempool {
 
 static Bool mempool_add_memblock (mempool * pool, size_t rsize);
 
-//mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size) {{{
+/* mempool_init(void ** memory, void * (*xmalloc)(size_t), void * (*xfree)(void *), size_t block_size) {{{ */
 extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void (*xfree)(void *), size_t block_size)
 {
     mempool * mem;
@@ -59,9 +59,9 @@ extern Bool mempool_init(void ** memory, void * (*xmalloc)(size_t), void (*xfree
     *memory  = (void *)mem;
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// mempool_done(void * memory) {{{
+/* mempool_done(void * memory) {{{ */
 void mempool_done(void ** memory)
 {
     mempool * mem;
@@ -82,9 +82,9 @@ void mempool_done(void ** memory)
     xfree(*memory);
     *memory = 0;
 }
-// }}} 
+/* }}} */
 
-// mempool_reset(void * memory) {{{
+/* mempool_reset(void * memory) {{{ */
 void mempool_reset(void * memory)
 {
     mempool  * pool;
@@ -109,9 +109,9 @@ void mempool_reset(void * memory)
     pool->usage = 0;
     pool->last  = aux;
 }
-// }}}
+/* }}} */ 
 
-// mempool_malloc(void * memory, size_t size) {{{
+/* mempool _malloc(void * memory, size_t size) {{{ */
 void * mempool_malloc(void * memory, size_t size)
 {
     mempool * pool;
@@ -147,9 +147,9 @@ void * mempool_malloc(void * memory, size_t size)
 
     return mmem;
 }
-// }}}
+/* }}} */
 
-// mempool_calloc(void * memory, size_t nmemb, size_t size) {{{
+/* mempool_calloc(void * memory, size_t nmemb, size_t size) {{{ */
 void * mempool_calloc(void * memory, size_t nmemb, size_t size)
 {
     void * mem;
@@ -159,9 +159,9 @@ void * mempool_calloc(void * memory, size_t nmemb, size_t size)
     }
     return mem;
 }
-// }}}
+/* }}} */
 
-// mempool_strndup(void * memory, uchar * key, size_t len) {{{
+/* mempool_strndup(void * memory, uchar * key, size_t len) {{{ */
 uchar * mempool_strndup(void * memory, uchar * key, size_t len)
 {
     uchar * mem;
@@ -173,9 +173,9 @@ uchar * mempool_strndup(void * memory, uchar * key, size_t len)
     *(mem+len) = '\0';
     return mem;
 }
-// }}}
+/* }}} */
 
-//mempool_add_memblock (mempool * pool, size_t rsize) {{{
+/* mempool_add_memblock (mempool * pool, size_t rsize) {{{ */
 static Bool mempool_add_memblock (mempool * pool, size_t rsize)
 {
     size_t size;
@@ -203,7 +203,7 @@ static Bool mempool_add_memblock (mempool * pool, size_t rsize)
     pool->blocks++;
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
 /*
  * Local variables:

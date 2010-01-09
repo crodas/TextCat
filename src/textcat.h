@@ -5,7 +5,7 @@
    | This source file is subject to version 3.01 of the PHP license,      |
    | that is bundled with this package in the file LICENSE, and is        |
    | available through the world-wide-web at the following url:           |
-   | http://www.php.net/license/3_01.txt                                  |
+   | http:/* www.php.net/license/3_01.txt                                  |
    | If you did not receive a copy of the PHP license and are unable to   |
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
@@ -20,7 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-// Definitions {{{
+/* Definitions {{{ */
 #define TC_HASH_SIZE    1000
 #define TC_BUFFER_SIZE  (16 * 1024) 
 #define TC_MAX_NGRAMS   400
@@ -42,9 +42,9 @@
 #define TC_NO_NGRAM         -5
 #define TC_ERR_CALLBACK     -6
 #define TC_ERR_NO_KNOWLEDGE -7
-// }}}
+/* }}} */
 
-// Data types {{{
+/* Data types {{{ */
 typedef struct {
     uchar * str;
     long freq;
@@ -118,7 +118,7 @@ typedef struct NGrams {
     NGram * ngram;
     long size;
 } NGrams;
-// }}}
+/* }}} */
 
 
 Bool TextCat_Init(TextCat ** tc);
@@ -128,6 +128,7 @@ Bool TextCat_reset_handlers(TextCat * tc);
 Bool TextCat_load(TextCat *tc);
 Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *** result, int * n);
 
+Bool TextCat_parse_ex(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams, Bool store_stack);
 Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ngram);
 Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams);
 Bool TextCat_list(TextCat * tc, uchar *** list, int * len);
