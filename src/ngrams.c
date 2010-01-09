@@ -21,7 +21,6 @@
 long textcat_simple_hash(const uchar *str, size_t len, size_t max_number)
 {
 	long hash = len * 13;
-    /* extract the ngrams, and pass-it to the library (with the callback) */
 	while (--len > 0) {
 		hash = (hash<<5)-hash + *str++;
 	}
@@ -262,7 +261,7 @@ Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result)
     textcat_destroy_hash(tc);
     return TC_TRUE;
 }
-/* }}}a */
+/* }}} */
 
 void ngrams_print(NGrams * ng)
 {
