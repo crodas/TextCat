@@ -17,7 +17,7 @@
 #include "textcat.h"
 #include "textcat_internal.h"
 
-// simple_hash(const uchar *, int) {{{
+/* simple_hash(const uchar *, int) {{{ */
 long textcat_simple_hash(const uchar *str, size_t len, size_t max_number)
 {
 	long hash = len * 13;
@@ -27,9 +27,9 @@ long textcat_simple_hash(const uchar *str, size_t len, size_t max_number)
 	}
 	return (long)hash & max_number;
 }
-// }}}
+/* }}} */
 
-// textcat_find_ngram(const ngram_set *, const uchar *, int, ngram **) {{{
+/* textcat_find_ngram(const ngram_set *, const uchar *, int, ngram **) {{{ */
 Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, ngram_t ** item)
 {
     ngram_t * entry;
@@ -43,9 +43,9 @@ Bool textcat_ngram_find(const ngram_set * nset, const uchar * key, size_t len, n
     }
     return TC_FALSE;
 }
-// }}}
-
-// textcat_ngram_incr(TextCat *, ngram_set *, const uchar *, size_t) {{{
+/* }}} */
+ 
+/* textcat_ngram_incr(TextCat *, ngram_set *, const uchar *, size_t) {{{ */
 Bool textcat_ngram_incr_ex(TextCat * tc, const uchar * key, size_t len, long freq)
 {
     ngram_t * item;
@@ -68,9 +68,9 @@ Bool textcat_ngram_incr(TextCat * tc, const uchar * key, size_t len)
 {
     return textcat_ngram_incr_ex(tc, key, len, 1);
 }
-// }}} 
+/* }}} */
 
-// textcat_ngram_create(TextCat *, ngram_set *, const uchar *, int, ngram **) {{{
+/* textcat_ngram_create(TextCat *, ngram_set *, const uchar *, int, ngram **) {{{ */
 Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, size_t len, ngram_t ** ritem)
 {
     ngram_t * item;
@@ -98,9 +98,9 @@ Bool textcat_ngram_create(TextCat * tc, ngram_set * nset, const uchar * key, siz
 
     return TC_TRUE;
 } 
-// }}}
+/* }}} */
 
-// textcat_init_hash(TextCat * tc) {{{
+/* textcat_init_hash(TextCat * tc) {{{ */
 Bool textcat_init_hash(TextCat * tc)
 {
     ngram_set * table;
@@ -123,17 +123,16 @@ Bool textcat_init_hash(TextCat * tc)
     tc->hash.size   = tc->hash_size;
     return TC_TRUE; 
 }
-// }}}
+/* }}} */
 
-// textcat_destroy_hash(TextCat * tc)  {{{
+/* textcat_destroy_hash(TextCat * tc)  {{{ */
 void textcat_destroy_hash(TextCat * tc) 
 {
     mempool_reset(tc->temp);
 }
-// }}}
+/* }}} */
 
-//textcat_copy_result(TextCat * tc, NGrams ** result) {{{
-//
+/* textcat_copy_result(TextCat * tc, NGrams ** result) {{{ */
 static int textcat_hash_sort(const void * a, const void *b)
 {
     int diff = 0;
@@ -199,9 +198,9 @@ Bool textcat_copy_result(TextCat * tc, NGrams ** result)
 
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// Sorting {{{
+/* Sorting {{{ */
 static int textcat_qsort_fnc_freq(const void * a, const void * b)
 {   
     int diff;
@@ -236,9 +235,9 @@ void textcat_ngram_sort_by_str(NGrams * ngrams)
     qsort(ngrams->ngram, ngrams->size, sizeof(NGram), textcat_qsort_fnc_str);
 }
 
-// }}}
+/* }}} */
 
-// textcat_result_merge(TextCat *, result_stack *, NGrams ** ) {{{
+/* textcat_result_merge(TextCat *, result_stack *, NGrams ** ) {{{ */
 Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result)
 {
     NGram * tmp;
@@ -263,7 +262,7 @@ Bool textcat_result_merge(TextCat *tc, result_stack * stack, NGrams ** result)
     textcat_destroy_hash(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
 void ngrams_print(NGrams * ng)
 {

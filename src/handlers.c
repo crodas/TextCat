@@ -170,7 +170,7 @@ long knowledge_dist(NGrams *a, NGrams *b, void * param)
     return (long)dist/max;
 }
 
-// Default Parsing text callback {{{
+/* Default Parsing text callback {{{ */
 Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t), void * param)
 {
     int i,e,x, valid;
@@ -218,7 +218,7 @@ Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length,
     }
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
 /*
  * Local variables:

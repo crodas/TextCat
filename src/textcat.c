@@ -17,7 +17,7 @@
 #include "textcat.h"
 #include "textcat_internal.h"
 
-// TextCat_Init(TextCat ** tcc) {{{
+/* TextCat_Init(TextCat ** tcc) {{{ */
 Bool TextCat_Init(TextCat ** tcc)
 {
     TextCat * tc;
@@ -46,9 +46,9 @@ Bool TextCat_Init(TextCat ** tcc)
     TextCat_reset_handlers(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// TextCat_reset(Textcat *) {{{
+/* TextCat_reset(Textcat *) {{{ */
 Bool TextCat_reset(TextCat * tc)
 {
     LOCK_INSTANCE(tc);
@@ -65,9 +65,9 @@ Bool TextCat_reset(TextCat * tc)
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}}
 
-// TextCat_reset_handler(TextCat * tc) {{{
+/* TextCat_reset_handler(TextCat * tc) {{{ */
 Bool TextCat_reset_handlers(TextCat * tc)
 {
     LOCK_INSTANCE(tc);
@@ -79,9 +79,9 @@ Bool TextCat_reset_handlers(TextCat * tc)
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// TextCat_Destroy(TextCat * tc) {{{
+/* TextCat_Destroy(TextCat * tc) {{{ */ 
 Bool TextCat_Destroy(TextCat * tc) 
 {
     LOCK_INSTANCE(tc);
@@ -93,10 +93,10 @@ Bool TextCat_Destroy(TextCat * tc)
     }
     free(tc);
 }
-// }}}
+/* }}} */
 
-// TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams) {{{
-Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams)
+/* TextCat_parse_ex(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams, Bool store_stack) {{{ */
+Bool TextCat_parse_ex(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams, Bool store_stack)
 {
     NGrams * result;
     result_stack * stack, *stack_temp;
@@ -120,18 +120,20 @@ Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** n
     }
 
     /* add the result to our Result Stack {{{ */
-    stack = mempool_malloc(tc->memory, sizeof(result_stack));
-    CHECK_MEM_EX(stack, textcat_destroy_hash(tc); tc->status=TC_FREE; )
-    stack->result = result;
-    stack->next   = NULL;
-    if (tc->results == NULL) {
-        tc->results = stack;
-    } else {
-        stack_temp = tc->results;
-        while (stack_temp->next != NULL) {
-            stack_temp = stack_temp->next;
+    if (store_stack == TC_TRUE) {
+        stack = mempool_malloc(tc->memory, sizeof(result_stack));
+        CHECK_MEM_EX(stack, textcat_destroy_hash(tc); tc->status=TC_FREE; )
+        stack->result = result;
+        stack->next   = NULL;
+        if (tc->results == NULL) {
+            tc->results = stack;
+        } else {
+            stack_temp = tc->results;
+            while (stack_temp->next != NULL) {
+                stack_temp = stack_temp->next;
+            }
+            stack_temp->next = stack;
         }
-        stack_temp->next = stack;
     }
     /* }}} */
 
@@ -144,9 +146,16 @@ Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** n
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams) {{{
+/* TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams) {{{ */
+Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length,  NGrams ** ngrams)
+{
+    return TextCat_parse_ex(tc, text, length, ngrams, TC_TRUE);
+}
+/* }}}
+
+/* TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams) {{{ */
 Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
 {
     int fd;
@@ -214,9 +223,9 @@ Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams)
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// TextCat_save(TextCat *, unsigned uchar *) {{{
+/* TextCat_save(TextCat *, unsigned uchar *) {{{ */
 Bool TextCat_save(TextCat * tc, const uchar * id)
 {
     NGrams * results;
@@ -238,9 +247,9 @@ Bool TextCat_save(TextCat * tc, const uchar * id)
     TextCat_reset(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// TextCat_list(TextCat * tc, uchar *** list, int * len) {{{
+/* TextCat_list(TextCat * tc, uchar *** list, int * len) {{{ */
 Bool TextCat_list(TextCat * tc, uchar *** list, int * len)
 {
     Bool ret;
@@ -256,9 +265,9 @@ Bool TextCat_list(TextCat * tc, uchar *** list, int * len)
     }
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// TextCat_load(TextCat *tc)  {{{
+/* TextCat_load(TextCat *tc)  {{{  */
 Bool TextCat_load(TextCat *tc) 
 {
     uchar ** list;
@@ -299,9 +308,9 @@ Bool TextCat_load(TextCat *tc)
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
-// TextCat_getCategory(TextCat *, const uchar *, size_t, uchar **, int *) {{{
+/* TextCat_getCategory(TextCat *, const uchar *, size_t, uchar **, int *) {{{ */
 static int _ranking_sort(void * a, void *b)
 {
     _cands * aa, * bb;
@@ -344,7 +353,7 @@ Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *
     UNLOCK_INSTANCE(tc);
     return TC_TRUE;
 }
-// }}}
+/* }}} */
 
 
 /*
