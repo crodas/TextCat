@@ -173,7 +173,7 @@ long knowledge_dist(NGrams *a, NGrams *b, void * param)
 /* Default Parsing text callback {{{ */
 Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length, int * (*set_ngram)(TextCat *, const uchar *, size_t), void * param)
 {
-    int i,e,x, valid;
+    size_t i,e,x, valid;
     uchar *ntext;
     /* create a copy of the text in order to do a best-effort
      * to clean it, setting everything to lower-case, removing
@@ -197,6 +197,7 @@ Bool textcat_default_text_parser(TextCat *tc, const uchar * text, size_t length,
             if (e+i > length) {
                 break;
             }
+
 
             /* allow spaces only at the beging and end (in order to reduce n-grams quantities) {{{ */
             valid = 1;

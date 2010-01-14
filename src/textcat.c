@@ -328,7 +328,7 @@ Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *
     if (TextCat_load(tc) == TC_FALSE) {
         return TC_FALSE;
     }
-    if (TextCat_parse(tc, text, length, &ptext) == TC_FALSE) {
+    if (TextCat_parse_ex(tc, text, length, &ptext, TC_FALSE) == TC_FALSE) {
         return TC_FALSE;
     }
     LOCK_INSTANCE(tc);
@@ -339,7 +339,7 @@ Bool TextCat_getCategory(TextCat *tc, const uchar * text, size_t length, uchar *
     }
     qsort(dists, tc->klTotal, sizeof(_cands),_ranking_sort);
 
-    threshold = dists[0].dist * tc->threshold;
+    threshold = (long)(dists[0].dist * tc->threshold);
     for (i=0; i  < tc->klTotal; i++) {
         if (threshold < dists[i].dist) {
             break;
