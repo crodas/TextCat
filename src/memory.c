@@ -125,10 +125,10 @@ void * mempool_malloc(void * memory, size_t size)
 
     for (mem=pool->first; mem; mem = mem->next) {
         if (mem->free == 1) {
-            free = mem->size - mem->offset;
-            if (free > size) {
+            free = mem->size > mem->offset ? mem->size - mem->offset : 0;
+            if (free > 0 && free > size) {
                 /* found a free block */
-                ask_mem   = 0;
+                ask_mem = 0;
                 break;
             }
         }
@@ -169,7 +169,7 @@ uchar * mempool_strndup(void * memory, uchar * key, size_t len)
     if (mem == NULL) {
         return NULL;
     }
-    strncpy(mem, key, len);
+    memcpy(mem, key, len);
     *(mem+len) = '\0';
     return mem;
 }
