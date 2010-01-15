@@ -16,6 +16,18 @@
 
 #include "textcat.h"
 
+char * mybasename(const *p)
+{
+    char i = '/';
+    char * r = p;
+    while (*p != '\0') {
+        if (i == *p) {
+            r = p;
+        }
+    }
+    return r;
+}
+
 int main(int argc, char * argv[])
 {
     TextCat * tc;
@@ -23,13 +35,13 @@ int main(int argc, char * argv[])
 
     TextCat_Init(&tc);
     for (i=1; i < argc; i++) {
-        printf("Adding %s\n", basename(argv[i]));
+        printf("Adding %s\n", mybasename(argv[i]));
         if (TextCat_parse_file(tc, argv[i] ,  NULL) == TC_FALSE) {
             printf("Error while reading %s\n", argv[i]);
             continue;
         }
-        if (TextCat_save(tc, basename(argv[i])) == TC_FALSE) {
-            printf("\tError while saving n-grams %s\n", basename(argv[i]));
+        if (TextCat_save(tc, mybasename(argv[i])) == TC_FALSE) {
+            printf("\tError while saving n-grams %s\n", mybasename(argv[i]));
         } else {
             printf("\tOK\n");
         }
