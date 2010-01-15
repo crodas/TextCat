@@ -16,14 +16,15 @@
 
 #include "textcat.h"
 
-char * mybasename(const *p)
+char * mybasename(const char * p)
 {
     char i = '/';
-    char * r = p;
-    while (*p != '\0') {
-        if (i == *p) {
-            r = p;
+    char * r = p, * e = p;
+    while (*e && *e != '\0') {
+        if (i == *e) {
+            r = e  + 1;
         }
+        *e++;
     }
     return r;
 }
