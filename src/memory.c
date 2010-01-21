@@ -144,7 +144,7 @@ void * mempool_malloc(void * memory, size_t size)
     }
     mmem = mem->memory + mem->offset;
     pool->usage += size;
-    mem->offset += size + 1;
+    mem->offset += size;
     mem->free    = mem->offset == mem->size ? 0 : 1; 
 
     return mmem;
