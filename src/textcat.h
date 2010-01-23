@@ -146,6 +146,8 @@ Bool TextCat_parse(TextCat * tc, const uchar * text, size_t length, NGrams ** ng
 Bool TextCat_parse_file(TextCat * tc, const uchar * filename, NGrams ** ngrams);
 Bool TextCat_list(TextCat * tc, uchar *** list, int * len);
 Bool TextCat_load(TextCat *tc);
+void * TextCat_malloc(void * memblock, size_t size);
+void * TextCat_strndup(void * memblock, uchar * str, size_t len);
 
 /*
  * Local variables:
