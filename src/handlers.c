@@ -10,7 +10,7 @@
    | obtain it through the world-wide-web, please send a note to          |
    | license@php.net so we can mail you a copy immediately.               |
    +----------------------------------------------------------------------+
-   | Author:  César Rodas <crodas@member.fsf.org>                         |
+   | Author:  César Rodas <crodas@php.net>                                |
    +----------------------------------------------------------------------+
  */
 #include "textcat.h"
