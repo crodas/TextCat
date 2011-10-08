@@ -111,7 +111,7 @@ TEXTCAT_LOAD(default)
     ncount  = 0;
     offset  = 0;
     do {
-        bytes = read(fd, content + offset, FILE_BUFFER - offset) + offset;
+        bytes = read(fd, content + offset, FILE_BUFFER);
         for (i=0; offset < bytes; offset++) {
             if (*(content+offset) == '\n') {
                 result->ngram[ncount].str       = tc_strndup(content+i, offset-i);
